@@ -12,6 +12,46 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
 from skimage.transform import resize
+import matplotlib.pyplot as plt
+from datetime import datetime
+import sys
+
+#CH print logs into file
+class Logger(object):
+    def __init__(self):
+        self.terminal = sys.stdout
+        now = datetime.now()
+        self.log = open(now.strftime("train_log/%Y%m%d_%H:%M:%S.txt"), "w")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)  
+
+    def flush(self):
+        #this flush method is needed for python 3 compatibility.
+        #this handles the flush command by doing nothing.
+        #you might want to specify some extra behavior here.
+        pass
+
+#CH convert pytorch tensor to numpy array, single chanel:
+def tensor2seis(input_image, imtype=np.uint8):
+    if isinstance(input_image, torch.Tensor):
+        image_tensor = input_image.data
+        image_numpy = image_tensor[0].cpu().float().numpy()
+        image_numpy = (image_numpy + 1) / 2.0 * 255.0
+        #image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0
+        return image_numpy.astype(imtype)
+    else:
+        return input_image
+    
+#CH plot a seismic figure:
+def plot_seis(input_image,clip=6,figsize=(20,20)):
+    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=figsize, facecolor='w', edgecolor='k',
+                        squeeze=False,
+                        sharex=True)
+    axs = axs.ravel()
+    image=tensor2seis(input_image)
+    im = axs[0].imshow(image, cmap=plt.cm.seismic, vmin=-clip, vmax=clip)
 
 def create_masks(opt, N=10):
     masks = []
@@ -83,6 +123,7 @@ class OptimizerMask:
 # Converts a Tensor into an image array (numpy)
 # |imtype|: the desired type of the converted numpy array
 def tensor2im(input_image, imtype=np.uint8):
+    
     if isinstance(input_image, torch.Tensor):
         image_tensor = input_image.data
     else:
@@ -100,6 +141,16 @@ def rm_extra_dim(image):
         return image[:3, :, :]
     elif image.dim() == 4:
         return image[:, :3, :, :]
+    else:
+        raise NotImplementedError
+#CH: modification for seismic data
+# Remove dummy dim from a tensor.
+# Useful when input is 4 dims.
+def rm_extra_dim_seis(image):
+    if image.dim() == 3:
+        return image[:1, :, :]
+    elif image.dim() == 4:
+        return image[:, :1, :, :]
     else:
         raise NotImplementedError
 
@@ -253,6 +304,7 @@ def cal_flag_given_mask_thred(mask, patch_size, stride, mask_thred):
 
 
 def save_image(image_numpy, image_path):
+    
     image_pil = Image.fromarray(image_numpy)
     image_pil.save(image_path)
 

@@ -14,7 +14,12 @@ if __name__ == "__main__":
     opt.no_flip = True  # no flip
     opt.display_id = -1 # no visdom display
     opt.loadSize = opt.fineSize  # Do not scale!
+    if opt.dataset_mode == 'seismic':
+        isseismic=True
+    else:
+        isseismic=False
 
+    test_start_time=time.time()
     data_loader = CreateDataLoader(opt)
     dataset = data_loader.load_data()
     model = create_model(opt)
@@ -23,7 +28,9 @@ if __name__ == "__main__":
     web_dir = os.path.join(opt.results_dir, opt.name, '%s_%s' % (opt.phase, opt.which_epoch))
     webpage = html.HTML(web_dir, 'Experiment = %s, Phase = %s, Epoch = %s' % (opt.name, opt.phase, opt.which_epoch))
     # test
+    
     for i, data in enumerate(dataset):
+        
         if i >= opt.how_many:
             break
         t1 = time.time()
@@ -34,5 +41,7 @@ if __name__ == "__main__":
         visuals = model.get_current_visuals()
         img_path = model.get_image_paths()
         print('process image... %s' % img_path)
-        save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize)
+        save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, isseismic=isseismic)
     webpage.save()
+    print(web_dir)
+    print("total elapsed time: %d min" % ((time.time()-test_start_time)/60))

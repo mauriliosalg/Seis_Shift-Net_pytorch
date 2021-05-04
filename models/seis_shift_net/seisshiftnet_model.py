@@ -2,16 +2,18 @@ import torch
 from torch.nn import functional as F
 import util.util as util
 from models import networks
-from models.shift_net.base_model import BaseModel
+from models.seis_shift_net.base_model import BaseModel
 import time
 import torchvision.transforms as transforms
 import os
 import numpy as np
 from PIL import Image
 
-class FaceShiftNetModel(BaseModel):
+class SeisShiftNetModel(BaseModel):
+
+    ### for seismic models input_nc=output_nc=1 must me true
     def name(self):
-        return 'FaceShiftNetModel'
+        return 'SeisShiftNetModel'
 
 
     def create_random_mask(self):
@@ -36,6 +38,8 @@ class FaceShiftNetModel(BaseModel):
         self.isTrain = opt.isTrain
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv']
+        if self.opt.val:
+            self.val_loss_name = ['Val_L1']
         # specify the images you want to save/display. The program will call base_model.get_current_visuals
         if self.opt.show_flow:
             self.visual_names = ['real_A', 'fake_B', 'real_B', 'flow_srcs']
@@ -49,8 +53,8 @@ class FaceShiftNetModel(BaseModel):
 
 
         # batchsize should be 1 for mask_global
-        self.mask_global = torch.zeros(self.opt.batchSize, 1, \
-                                 opt.fineSize, opt.fineSize, dtype=torch.bool)
+        self.mask_global = torch.zeros((self.opt.batchSize, 1, \
+                                 opt.fineSize, opt.fineSize), dtype=torch.bool)
 
         # Here we need to set an artificial mask_global(center hole is ok.)
         self.mask_global.zero_()
@@ -58,7 +62,6 @@ class FaceShiftNetModel(BaseModel):
                                 int(self.opt.fineSize/4) + self.opt.overlap: int(self.opt.fineSize/2) + int(self.opt.fineSize/4) - self.opt.overlap] = 1
 
         if len(opt.gpu_ids) > 0:
-            self.use_gpu = True
             self.mask_global = self.mask_global.to(self.device)
 
         # load/define networks
@@ -87,7 +90,6 @@ class FaceShiftNetModel(BaseModel):
             self.vgg16_extractor = self.vgg16_extractor.to(self.gpu_ids[0])
             self.vgg16_extractor = torch.nn.DataParallel(self.vgg16_extractor, self.gpu_ids)
 
-
         if self.isTrain:
             self.old_lr = opt.lr
             # define loss functions
@@ -95,8 +97,10 @@ class FaceShiftNetModel(BaseModel):
             self.criterionL1 = torch.nn.L1Loss()
             self.criterionL1_mask = networks.Discounted_L1(opt).to(self.device) # make weights/buffers transfer to the correct device
             # VGG loss
-            self.criterionL2_style_loss = torch.nn.MSELoss()
-            self.criterionL2_content_loss = torch.nn.MSELoss()
+            # CH - vgg expects 3 chanel, so i removed style_loss
+            if self.opt.style_and_content:
+                self.criterionL2_style_loss = torch.nn.MSELoss()
+                self.criterionL2_content_loss = torch.nn.MSELoss()
             # TV loss
             self.tv_criterion = networks.TVLoss(self.opt.tv_weight)
 
@@ -121,14 +125,14 @@ class FaceShiftNetModel(BaseModel):
 
         if not self.isTrain or opt.continue_train:
             self.load_networks(opt.which_epoch)
-
+ 
         self.print_networks(opt.verbose)
 
     def set_input(self, input):
-        self.image_paths = input['A_paths']
+        
+        self.image_samples = input['A_sample']
         real_A = input['A'].to(self.device)
         real_B = input['B'].to(self.device)
-        real_A_flip = input['A_F'].to(self.device)
         # directly load mask offline
         self.mask_global = input['M'].to(self.device).byte()
         self.mask_global = self.mask_global.narrow(1,0,1).bool()
@@ -154,27 +158,24 @@ class FaceShiftNetModel(BaseModel):
             self.opt.mask_sub_type = 'island'
 
         self.set_latent_mask(self.mask_global)
+        
 
-        real_A.narrow(1,0,1).masked_fill_(self.mask_global, 0.)#2*123.0/255.0 - 1.0
-        real_A.narrow(1,1,1).masked_fill_(self.mask_global, 0.)#2*104.0/255.0 - 1.0
-        real_A.narrow(1,2,1).masked_fill_(self.mask_global, 0.)#2*117.0/255.0 - 1.0
-
-        self.mask_global_flip = torch.flip(self.mask_global.float(), [3]).bool()
-        real_A_flip.narrow(1,0,1).masked_fill_(self.mask_global_flip, 0.)#2*123.0/255.0 - 1.0
-        real_A_flip.narrow(1,1,1).masked_fill_(self.mask_global_flip, 0.)#2*104.0/255.0 - 1.0
-        real_A_flip.narrow(1,2,1).masked_fill_(self.mask_global_flip, 0.)#2*117.0/255.0 - 1.0
-
+        if self.opt.input_nc == 1:
+            real_A.narrow(1,0,1).masked_fill_(self.mask_global, 0.)
+           
+        else: 
+            real_A.narrow(1,0,1).masked_fill_(self.mask_global, 0.)#2*123.0/255.0 - 1.0
+            real_A.narrow(1,1,1).masked_fill_(self.mask_global, 0.)#2*104.0/255.0 - 1.0
+            real_A.narrow(1,2,1).masked_fill_(self.mask_global, 0.)#2*117.0/255.0 - 1.0
 
         if self.opt.add_mask2input:
             # make it 4 dimensions.
             # Mention: the extra dim, the masked part is filled with 0, non-mask part is filled with 1.
             real_A = torch.cat((real_A, (~self.mask_global).expand(real_A.size(0), 1, real_A.size(2), real_A.size(3)).type_as(real_A)), dim=1)
-            real_A_flip = torch.cat((real_A_flip, (~self.mask_global_flip).expand(real_A_flip.size(0), 1, real_A.size(2), real_A.size(3)).type_as(real_A)), dim=1)
 
         self.real_A = real_A
         self.real_B = real_B
-        self.real_A_flip = real_A_flip
-
+    
 
     def set_latent_mask(self, mask_global):
         for ng_shift in self.ng_shift_list: # ITERATE OVER THE LIST OF ng_shift_list
@@ -194,11 +195,8 @@ class FaceShiftNetModel(BaseModel):
 
 
     def forward(self):
-        _, flip_feat = self.netG(self.real_A_flip)
-        # set guidance here
-        
         self.set_gt_latent()
-        self.fake_B, _ = self.netG(self.real_A, flip_feat)
+        self.fake_B = self.netG(self.real_A)
         
 
     # Just assume one shift layer.
@@ -216,7 +214,7 @@ class FaceShiftNetModel(BaseModel):
         self.ng_shift_list[0].set_flow_false()
 
     def get_image_paths(self):
-        return self.image_paths
+        return self.image_samples
 
     def backward_D(self):
         fake_B = self.fake_B
@@ -224,13 +222,13 @@ class FaceShiftNetModel(BaseModel):
         real_B = self.real_B # GroundTruth
 
         # Has been verfied, for square mask, let D discrinate masked patch, improves the results.
-        if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect':
+        if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect': 
             # Using the cropped fake_B as the input of D.
             fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
 
             real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
 
         self.pred_fake = self.netD(fake_B.detach())
         self.pred_real = self.netD(real_B)
@@ -251,21 +249,14 @@ class FaceShiftNetModel(BaseModel):
             elif self.opt.gan_type == 're_s_gan':
                 self.loss_D = self.criterionGAN(self.pred_real - self.pred_fake, True)
 
-            elif self.opt.gan_type == 're_avg_gan':
-                self.loss_D =  (self.criterionGAN (self.pred_real - torch.mean(self.pred_fake), True) \
-                               + self.criterionGAN (self.pred_fake - torch.mean(self.pred_real), False)) / 2.
-        # for `re_avg_gan`, need to retain graph of D.
-        if self.opt.gan_type == 're_avg_gan':
-            self.loss_D.backward(retain_graph=True)
-        else:
-            self.loss_D.backward()
+        self.loss_D.backward()
 
 
     def backward_G(self):
         # First, G(A) should fake the discriminator
         fake_B = self.fake_B
         # Has been verfied, for square mask, let D discrinate masked patch, improves the results.
-        if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect':
+        if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect': 
         # Using the cropped fake_B as the input of D.
             fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
@@ -300,7 +291,7 @@ class FaceShiftNetModel(BaseModel):
         # calcuate mask construction loss
         # When mask_type is 'center' or 'random_with_rect', we can add additonal mask region construction loss (traditional L1).
         # Only when 'discounting_loss' is 1, then the mask region construction loss changes to 'discounting L1' instead of normal L1.
-        if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect':
+        if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect': 
             mask_patch_fake = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                                 self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
             mask_patch_real = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
@@ -314,38 +305,45 @@ class FaceShiftNetModel(BaseModel):
         self.loss_tv = self.tv_criterion(self.fake_B*self.mask_global.float())
 
         # Finally, add style loss
-        vgg_ft_fakeB = self.vgg16_extractor(fake_B)
-        vgg_ft_realB = self.vgg16_extractor(real_B)
-        self.loss_style = 0
-        self.loss_content = 0
+        # CH optional style and content loss.
+        if self.opt.style_and_content:
+            vgg_ft_fakeB = self.vgg16_extractor(fake_B)
+            vgg_ft_realB = self.vgg16_extractor(real_B)
+            self.loss_style = 0
+            self.loss_content = 0
 
-        for i in range(3):
-            self.loss_style += self.criterionL2_style_loss(util.gram_matrix(vgg_ft_fakeB[i]), util.gram_matrix(vgg_ft_realB[i]))
-            self.loss_content += self.criterionL2_content_loss(vgg_ft_fakeB[i], vgg_ft_realB[i])
+            for i in range(3):
+                self.loss_style += self.criterionL2_style_loss(util.gram_matrix(vgg_ft_fakeB[i]), util.gram_matrix(vgg_ft_realB[i]))
+                self.loss_content += self.criterionL2_content_loss(vgg_ft_fakeB[i], vgg_ft_realB[i])
 
-        self.loss_style *= self.opt.style_weight
-        self.loss_content *= self.opt.content_weight
+            self.loss_style *= self.opt.style_weight
+            self.loss_content *= self.opt.content_weight
+        else:
+            self.loss_style = 0
+            self.loss_content = 0   
 
         self.loss_G += (self.loss_style + self.loss_content + self.loss_tv)
 
         self.loss_G.backward()
 
     def optimize_parameters(self):
-        
         self.forward()
-        
         # update D
         self.set_requires_grad(self.netD, True)
         self.optimizer_D.zero_grad()
         self.backward_D()
         self.optimizer_D.step()
         
-
         # update G
         self.set_requires_grad(self.netD, False)
         self.optimizer_G.zero_grad()
         self.backward_G()
         self.optimizer_G.step()
-        
+    
+    def validate(self):
+        with torch.no_grad():
+            self.forward()
+            self.loss_Val_L1 = 0
+            self.loss_Val_L1 += self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_A
 
 

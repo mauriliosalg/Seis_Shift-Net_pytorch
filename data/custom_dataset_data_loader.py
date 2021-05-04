@@ -15,6 +15,10 @@ def CreateDataset(opt):
     elif opt.dataset_mode == 'single':
         from data.single_dataset import SingleDataset
         dataset = SingleDataset()
+    
+    elif opt.dataset_mode == 'seismic':
+        from data.seismic_dataset import SeismicDataset
+        dataset = SeismicDataset()
 
     else:
         raise ValueError("Dataset [%s] not recognized." % opt.dataset_mode)
@@ -31,15 +35,34 @@ class CustomDatasetDataLoader(BaseDataLoader):
     def initialize(self, opt):
         BaseDataLoader.initialize(self, opt)
         self.dataset = CreateDataset(opt)
+        #CH: Inclusão de dataset de validação
+        if self.opt.val:
+            self.train_set, self.val_set = torch.utils.data.random_split(self.dataset, [int(len(self.dataset)*(1-opt.valsize)), int(len(self.dataset)*opt.valsize)])
+            
+            self.valdataloader = torch.utils.data.DataLoader(
+                self.val_set,
+                batch_size=opt.batchSize,
+                shuffle=not opt.serial_batches,
+                num_workers=int(opt.nThreads))
 
-        self.dataloader = torch.utils.data.DataLoader(
-            self.dataset,
-            batch_size=opt.batchSize,
-            shuffle=not opt.serial_batches,
-            num_workers=int(opt.nThreads))
+            self.traindataloader = torch.utils.data.DataLoader(
+                self.train_set,
+                batch_size=opt.batchSize,
+                shuffle=not opt.serial_batches,
+                num_workers=int(opt.nThreads))
+
+        else:
+            self.traindataloader = torch.utils.data.DataLoader(
+                self.dataset,
+                batch_size=opt.batchSize,
+                shuffle=not opt.serial_batches,
+                num_workers=int(opt.nThreads))
 
     def load_data(self):
-        return self
+        if self.opt.val:
+            return self.traindataloader , self.valdataloader
+        else:    
+            return self.traindataloader
 
     def __len__(self):
         return min(len(self.dataset), self.opt.max_dataset_size)

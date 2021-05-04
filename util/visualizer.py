@@ -6,13 +6,14 @@ import sys
 from subprocess import Popen, PIPE
 from . import util, html
 from scipy.misc import imresize
+import matplotlib.pyplot as plt
 
 if sys.version_info[0] == 2:
     VisdomExceptionBase = Exception
 else:
     VisdomExceptionBase = ConnectionError
 
-def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256):
+def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256 , isseismic=False):
     """Save images to the disk.
     Parameters:
         webpage (the HTML class) -- the HTML webpage class that stores these imaegs (see html.py for more details)
@@ -22,7 +23,9 @@ def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256):
         width (int)              -- the images will be resized to width x width
     This function will save images stored in 'visuals' to the HTML file specified by 'webpage'.
     """
+    
     image_dir = webpage.get_image_dir()
+    
     short_path = ntpath.basename(image_path[0])
     name = os.path.splitext(short_path)[0]
 
@@ -30,14 +33,25 @@ def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256):
     ims, txts, links = [], [], []
 
     for label, im_data in visuals.items():
-        im = util.tensor2im(im_data)
+        if isseismic:
+            im = util.rm_extra_dim_seis(im_data)
+            im = util.tensor2seis(im)
+            
+        else:
+            im = util.tensor2im(im_data)
+        
         image_name = '%s_%s.png' % (name, label)
         save_path = os.path.join(image_dir, image_name)
-        h, w, _ = im.shape
+        if isseismic:
+            _, h, w = im.shape
+            im=im[0]
+        else:
+            h, w, _ = im.shape
         if aspect_ratio > 1.0:
             im = imresize(im, (h, int(w * aspect_ratio)), interp='bicubic')
         if aspect_ratio < 1.0:
             im = imresize(im, (int(h / aspect_ratio), w), interp='bicubic')
+        
         util.save_image(im, save_path)
 
         ims.append(image_name)
@@ -53,6 +67,7 @@ class Visualizer():
         self.name = opt.name
         self.port = opt.display_port
         self.opt = opt
+        self.dataset_mode=opt.dataset_mode
         self.saved = False
         if self.display_id > 0:
             import visdom
@@ -97,30 +112,57 @@ class Visualizer():
                 label_html_row = ''
                 images = []
                 idx = 0
-                for label, image in visuals.items():
-                    image = util.rm_extra_dim(image) # remove the dummy dim
-                    image_numpy = util.tensor2im(image)
-                    label_html_row += '<td>%s</td>' % label
-                    images.append(image_numpy.transpose([2, 0, 1]))
-                    idx += 1
-                    if idx % ncols == 0:
+                if self.dataset_mode != 'seismic':
+                    for label, image in visuals.items():
+                        image = util.rm_extra_dim(image) # remove the dummy dim
+                        image_numpy = util.tensor2im(image)
+                        label_html_row += '<td>%s</td>' % label
+                        images.append(image_numpy.transpose([2, 0, 1]))
+                        idx += 1
+                        if idx % ncols == 0:
+                            label_html += '<tr>%s</tr>' % label_html_row
+                            label_html_row = ''
+                    white_image = np.ones_like(image_numpy.transpose([2, 0, 1])) * 255
+                    while idx % ncols != 0:
+                        images.append(white_image)
+                        label_html_row += '<td></td>'
+                        idx += 1
+                    if label_html_row != '':
                         label_html += '<tr>%s</tr>' % label_html_row
-                        label_html_row = ''
-                white_image = np.ones_like(image_numpy.transpose([2, 0, 1])) * 255
-                while idx % ncols != 0:
-                    images.append(white_image)
-                    label_html_row += '<td></td>'
-                    idx += 1
-                if label_html_row != '':
-                    label_html += '<tr>%s</tr>' % label_html_row
-                try:
-                    self.vis.images(images, nrow=ncols, win=self.display_id + 1,
-                                    padding=2, opts=dict(title=title + ' images'))
-                    label_html = '<table>%s</table>' % label_html
-                    self.vis.text(table_css + label_html, win=self.display_id + 2,
-                                opts=dict(title=title + ' labels'))
-                except VisdomExceptionBase:
-                    self.create_visdom_connections()
+                    try:
+                        self.vis.images(images, nrow=ncols, win=self.display_id + 1,
+                                        padding=2, opts=dict(title=title + ' images'))
+                        label_html = '<table>%s</table>' % label_html
+                        self.vis.text(table_css + label_html, win=self.display_id + 2,
+                                    opts=dict(title=title + ' labels'))
+                    except VisdomExceptionBase:
+                        self.create_visdom_connections()
+                else:
+                    for label, image in visuals.items():
+                        image = util.rm_extra_dim_seis(image) # remove the dummy dim
+                        image_numpy = util.tensor2seis(image)
+                        label_html_row += '<td>%s</td>' % label
+                        images.append(image_numpy)
+                        idx += 1
+                        if idx % ncols == 0:
+                            label_html += '<tr>%s</tr>' % label_html_row
+                            label_html_row = ''
+                    white_image = np.ones_like(image_numpy)* 255
+                    while idx % ncols != 0:
+                        images.append(white_image)
+                        label_html_row += '<td></td>'
+                        idx += 1
+                    if label_html_row != '':
+                        label_html += '<tr>%s</tr>' % label_html_row
+                    try:
+                        self.vis.images(images, nrow=ncols, win=self.display_id + 1,
+                                        padding=2, opts=dict(title=title + ' images'))
+                        label_html = '<table>%s</table>' % label_html
+                        self.vis.text(table_css + label_html, win=self.display_id + 2,
+                                    opts=dict(title=title + ' labels'))
+                    except VisdomExceptionBase:
+                        self.create_visdom_connections()
+                
             else:
                 idx = 1
                 for label, image in visuals.items():
@@ -152,6 +194,8 @@ class Visualizer():
 
     # losses: dictionary of error labels and values
     def plot_current_losses(self, epoch, counter_ratio, opt, losses):
+        #import pdb
+        #pdb.set_trace()
         if not hasattr(self, 'plot_data'):
             self.plot_data = {'X': [], 'Y': [], 'legend': list(losses.keys())}
         self.plot_data['X'].append(epoch + counter_ratio)
@@ -165,6 +209,21 @@ class Visualizer():
                 'xlabel': 'epoch',
                 'ylabel': 'loss'},
             win=self.display_id)
+    
+    def plot_mean_losses(self,epoch, opt, losses):
+        if not hasattr(self, 'plot_data2'):
+            self.plot_data2 = {'X': [], 'Y': [], 'legend': list(losses.keys())}
+        self.plot_data2['X'].append(epoch)
+        self.plot_data2['Y'].append([losses[k] for k in self.plot_data2['legend']])
+        self.vis.line(
+            X=np.array(self.plot_data2['X']),
+            Y=np.array(self.plot_data2['Y']),
+            opts={
+                'title': self.name + ' mean loss over time',
+                'legend': self.plot_data2['legend'],
+                'xlabel': 'epoch',
+                'ylabel': 'loss'},
+            win=4)
 
     # losses: same format as |losses| of plot_current_losses
     def print_current_losses(self, epoch, i, losses, t, t_data):
@@ -175,5 +234,22 @@ class Visualizer():
         print(message)
         with open(self.log_name, "a") as log_file:
             log_file.write('%s\n' % message)
+    #CH: function to return value of specific loss
+    def get_loss_value(self,losses,key):
+        for k, v in losses.items():
+           if k==key:
+               return v
+    #CH: Save loss_plot
+    def save_loss_plot(self,losses,opt):
+        import pdb
+        pdb.set_trace()
+        fig, ax = plt.subplots(1,1, figsize=(14,12))
+        for k, v in losses.items():
+            ax.plot(np.arange(len(v)),np.array(v),label=k)
+        ax.set_ylabel('Losses Values',fontsize=16 )
+        ax.set_xlabel('Epochs',fontsize=16)
+        ax.legend()
+        ax.set_title('Train & Val Losses x Epochs', fontsize=20)
+        plt.savefig(os.path.join(opt.checkpoints_dir, opt.name,"losses.jpg"))
 
 

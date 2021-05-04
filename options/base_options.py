@@ -75,7 +75,13 @@ class BaseOptions():
                             help='If True, it will save only the lastest weights')
         parser.add_argument('--add_mask2input', type=int, default=1,
                             help='If True, It will add the mask as a fourth dimension over input space')
-
+        #CH option to shut down vgg loss
+        parser.add_argument('--style_and_content', action='store_false', help='if vgg is going to be used')
+        #CH number of seismic images to generate for training
+        parser.add_argument('--nseisimg', type=int, default=10000, help='number of seismic images to generate for training')
+        parser.add_argument('--nlines', type=int, default=700, help='number of seismic lines to use for training')
+        parser.add_argument('--linemute', type=list, default=[264,401], help='line interval not to train')
+        parser.add_argument('--smode', type=str, default='random', help='mode of chosing seismic images: sequential or random')
         self.initialized = True
         return parser
 

@@ -25,6 +25,12 @@ def create_model(opt):
         assert (opt.dataset_mode == 'aligned' or opt.dataset_mode == 'aligned_resized')
         from models.face_shift_net.face_shiftnet_model import FaceShiftNetModel
         model = FaceShiftNetModel()
+    
+    elif opt.model == 'seismic_shiftnet':
+        assert (opt.dataset_mode == 'seismic')
+        from models.seis_shift_net.seisshiftnet_model import SeisShiftNetModel
+        model = SeisShiftNetModel()
+
     else:
         raise ValueError("Model [%s] not recognized." % opt.model)
     model.initialize(opt)

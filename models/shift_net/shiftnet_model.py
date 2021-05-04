@@ -36,6 +36,8 @@ class ShiftNetModel(BaseModel):
         self.isTrain = opt.isTrain
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv']
+        if self.opt.val:
+            self.val_loss_name = ['Val_L1']
         # specify the images you want to save/display. The program will call base_model.get_current_visuals
         if self.opt.show_flow:
             self.visual_names = ['real_A', 'fake_B', 'real_B', 'flow_srcs']
@@ -321,5 +323,9 @@ class ShiftNetModel(BaseModel):
         self.optimizer_G.zero_grad()
         self.backward_G()
         self.optimizer_G.step()
-
-
+    
+    def validate(self):
+        with torch.no_grad():
+            self.forward()
+            self.loss_Val_L1 = 0
+            self.loss_Val_L1 += self.criterionL1(self.fake_B, self.real_B)

@@ -5,16 +5,18 @@ from .base_options import BaseOptions
 class TrainOptions(BaseOptions):
     def initialize(self, parser):
         parser = BaseOptions.initialize(self, parser)
-        parser.add_argument('--display_freq', type=int, default=100, help='frequency of showing training results on screen')
+        #CH: changed default from original from 100 to 1000
+        parser.add_argument('--display_freq', type=int, default=1000, help='frequency of showing training results on screen')
         parser.add_argument('--display_ncols', type=int, default=5, help='if positive, display all images in a single visdom web panel with certain number of images per row.')
         parser.add_argument('--display_env', type=str, default='main', help='visdom display environment name (default is "main")')
         parser.add_argument('--display_id', type=int, default=1, help='window id of the web display')
         parser.add_argument('--display_port', type=int, default=8097, help='visdom port of the web display')
         parser.add_argument('--display_server', type=str, default="http://localhost", help='visdom server of the web display')
-        parser.add_argument('--print_freq', type=int, default=50, help='frequency of showing training results on console')
+        #CH: changed default from original from 50 to 1000
+        parser.add_argument('--print_freq', type=int, default=1000, help='frequency of showing training results on console')
         parser.add_argument('--display_single_pane_ncols', type=int, default=0, help='if positive, display all images in a single visdom web panel with certain number of images per row.')
-        parser.add_argument('--save_latest_freq', type=int, default=5000, help='frequency of saving the latest results')
-        parser.add_argument('--save_epoch_freq', type=int, default=2, help='frequency of saving checkpoints at the end of epochs')
+        parser.add_argument('--save_latest_freq', type=int, default=12000, help='frequency of saving the latest results')
+        parser.add_argument('--save_epoch_freq', type=int, default=10, help='frequency of saving checkpoints at the end of epochs')
         parser.add_argument('--continue_train', action='store_true', help='continue training: load the latest model')
         parser.add_argument('--epoch_count', type=int, default=1, help='the starting epoch count, we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>, ...')
         parser.add_argument('--phase', type=str, default='train', help='train, val, test, etc')
@@ -28,6 +30,9 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
         parser.add_argument('--update_html_freq', type=int, default=1000, help='frequency of saving training results to html')
         parser.add_argument('--training_mask_folder', type=str, default='masks/training_masks', help='prepared masks for training')
+        #CH: inclusion of validation option
+        parser.add_argument('--val', action='store_true',  help='validation set definition and loss computation')
+        parser.add_argument('--valsize', type=float, default=0.2, help='percentage of total dataset set for validation')
         self.isTrain = True
 
         return parser
