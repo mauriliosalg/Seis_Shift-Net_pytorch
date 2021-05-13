@@ -43,8 +43,9 @@ class BaseOptions():
         ## model specific
         parser.add_argument('--mask_type', type=str, default='center',
                             help='the type of mask you want to apply, \'center\' or \'random\'')
+        # CH: include rect_const
         parser.add_argument('--mask_sub_type', type=str, default='island',
-                            help='the type of mask you want to apply, \'rect \' or \'fractal \' or \'island \'')
+                            help='the type of mask you want to apply, \'rect \' or \'fractal \' or \'island \' or \'rect_const\'')
         parser.add_argument('--lambda_A', type=int, default=100, help='weight on L1 term in objective')
         parser.add_argument('--stride', type=int, default=1, help='should be dense, 1 is a good option.')
         parser.add_argument('--shift_sz', type=int, default=1, help='shift_sz>1 only for \'soft_shift_patch\'.')
@@ -82,6 +83,8 @@ class BaseOptions():
         parser.add_argument('--nlines', type=int, default=700, help='number of seismic lines to use for training')
         parser.add_argument('--linemute', type=list, default=[264,401], help='line interval not to train')
         parser.add_argument('--smode', type=str, default='random', help='mode of chosing seismic images: sequential or random')
+        #CH: mask options
+        parser.add_argument('--mask_width', type=int, default=128, help='width of the rectangular mask')
         self.initialized = True
         return parser
 

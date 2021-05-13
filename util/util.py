@@ -229,6 +229,19 @@ def create_rand_mask(opt):
 
     return torch.ByteTensor(mask), rand_t, rand_l
 
+# Create a rectangular mask with random position
+def create_rect_mask(opt):
+    h, w = opt.fineSize, opt.fineSize
+    mwidth = opt.mask_width
+    assert mwidth<w, "please use a mask width smaller then the image width."
+    mask = np.zeros((h, w))
+    wcoord = w//2 - mwidth//2
+    
+    mask[0:opt.fineSize-1, wcoord:wcoord+mwidth] = 1
+
+    return torch.ByteTensor(mask), 0, wcoord
+
+
 action_list = [[0, 1], [0, -1], [1, 0], [-1, 0]]
 def random_walk(canvas, ini_x, ini_y, length):
     x = ini_x
