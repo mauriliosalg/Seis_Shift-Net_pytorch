@@ -34,6 +34,12 @@ class SeisShiftNetModel(BaseModel):
                 self.rand_t = rand_t
                 self.rand_l = rand_l
                 return mask
+            #CH: inserting rectangular mask with ramdom width    
+            elif self.opt.mask_sub_type == 'randw_rect':
+                mask, rand_t, rand_l = util.create_rect_mask(self.opt)
+                self.rand_t = rand_t
+                self.rand_l = rand_l
+                return mask
 
             elif self.opt.mask_sub_type == 'island':
                 mask = util.wrapper_gmask(self.opt)
