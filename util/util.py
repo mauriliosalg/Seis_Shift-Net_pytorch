@@ -260,7 +260,7 @@ def create_rand_fullrect_mask(opt):
     assert mwidth<w, "please use a mask width smaller then the image width."
     mask = np.zeros((h, w))
     maxl = w - opt.overlap - mwidth
-    wcoord = np.random.randint(opt.overlap, opt.maxl)
+    wcoord = np.random.randint(opt.overlap, maxl)
     
     
     mask[0:opt.fineSize-1, wcoord:wcoord+mwidth] = 1
