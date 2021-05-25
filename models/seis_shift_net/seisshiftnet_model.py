@@ -30,13 +30,19 @@ class SeisShiftNetModel(BaseModel):
 
             #CH: inserting rectangular mask with constant width
             elif self.opt.mask_sub_type == 'rect_const':
-                mask, rand_t, rand_l = util.create_rect_mask(self.opt)
+                mask, rand_t, rand_l = util.create_fullrect_mask(self.opt)
                 self.rand_t = rand_t
                 self.rand_l = rand_l
                 return mask
             #CH: inserting rectangular mask with ramdom width    
             elif self.opt.mask_sub_type == 'randw_rect':
-                mask, rand_t, rand_l = util.create_rand_rect_mask(self.opt)
+                mask, rand_t, rand_l = util.create_randw_fullrect_mask(self.opt)
+                self.rand_t = rand_t
+                self.rand_l = rand_l
+                return mask
+            #CH: inserting rectangular mask with ramdom width and initial point    
+            elif self.opt.mask_sub_type == 'rand_rect':
+                mask, rand_t, rand_l = util.create_rand_fullrect_mask(self.opt)
                 self.rand_t = rand_t
                 self.rand_l = rand_l
                 return mask

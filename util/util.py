@@ -229,8 +229,8 @@ def create_rand_mask(opt):
 
     return torch.ByteTensor(mask), rand_t, rand_l
 
-# Create a rectangular mask with constant width
-def create_rect_mask(opt):
+# Create a full height rectangular mask with constant width
+def create_fullrect_mask(opt):
     h, w = opt.fineSize, opt.fineSize
     mwidth = opt.mask_width
     assert mwidth<w, "please use a mask width smaller then the image width."
@@ -241,8 +241,8 @@ def create_rect_mask(opt):
 
     return torch.ByteTensor(mask), 0, wcoord
 
-# Create a rectangular mask with random width
-def create_rand_rect_mask(opt):
+# Create a full height rectangular mask with random width
+def create_randw_fullrect_mask(opt):
     h, w = opt.fineSize, opt.fineSize
     mwidth = np.random.randint(opt.overlap,  opt.mask_width)
     assert mwidth<w, "please use a mask width smaller then the image width."
@@ -252,6 +252,24 @@ def create_rand_rect_mask(opt):
     mask[0:opt.fineSize-1, wcoord:wcoord+mwidth] = 1
 
     return torch.ByteTensor(mask), 0, wcoord
+
+# Create a full height rectangular mask with random width and inital point
+def create_rand_fullrect_mask(opt):
+    h, w = opt.fineSize, opt.fineSize
+    mwidth = np.random.randint(opt.overlap,  opt.mask_width)
+    assert mwidth<w, "please use a mask width smaller then the image width."
+    mask = np.zeros((h, w))
+    wcoord = np.random.randint(opt.overlap, mwidth//2-opt.overlap)
+    
+    mask[0:opt.fineSize-1, wcoord:wcoord+mwidth] = 1
+
+    return torch.ByteTensor(mask), 0, wcoord
+
+
+# Create a rectangular mask with tailored width
+def generate_personalized_mask(opt):
+
+
 
 action_list = [[0, 1], [0, -1], [1, 0], [-1, 0]]
 def random_walk(canvas, ini_x, ini_y, length):
