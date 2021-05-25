@@ -268,8 +268,9 @@ def create_rand_fullrect_mask(opt):
 
 # Create a rectangular mask with tailored width
 def generate_personalized_mask(opt):
-
-
+    h, w = opt.fineSize, opt.fineSize
+    mask=np.zeros((h, w))
+    return mask
 
 action_list = [[0, 1], [0, -1], [1, 0], [-1, 0]]
 def random_walk(canvas, ini_x, ini_y, length):
