@@ -259,12 +259,13 @@ def create_rand_fullrect_mask(opt):
     mwidth = np.random.randint(2*opt.overlap,  opt.mask_width)
     assert mwidth<w, "please use a mask width smaller then the image width."
     mask = np.zeros((h, w))
-    wcoord = np.random.randint(0, mwidth//2)
+    maxl = w - opt.overlap - mwidth
+    wcoord = np.random.randint(opt.overlap, opt.maxl)
+    
     
     mask[0:opt.fineSize-1, wcoord:wcoord+mwidth] = 1
 
     return torch.ByteTensor(mask), 0, wcoord
-
 
 # Create a rectangular mask with tailored width
 def generate_personalized_mask(opt):
