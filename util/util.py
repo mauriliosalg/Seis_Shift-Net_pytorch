@@ -256,10 +256,10 @@ def create_randw_fullrect_mask(opt):
 # Create a full height rectangular mask with random width and inital point
 def create_rand_fullrect_mask(opt):
     h, w = opt.fineSize, opt.fineSize
-    mwidth = np.random.randint(opt.overlap,  opt.mask_width)
+    mwidth = np.random.randint(opt.overlap+1,  opt.mask_width)
     assert mwidth<w, "please use a mask width smaller then the image width."
     mask = np.zeros((h, w))
-    wcoord = np.random.randint(opt.overlap, mwidth//2-opt.overlap)
+    wcoord = np.random.randint(opt.overlap, mwidth//2)
     
     mask[0:opt.fineSize-1, wcoord:wcoord+mwidth] = 1
 
