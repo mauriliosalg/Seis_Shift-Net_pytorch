@@ -30,6 +30,9 @@ def is_seismic_file(filename):
 
 def make_imgs(lines,nimg,mode,size=256, mute=[264,401]):
     
+    bcenter=720 #centro do buraco
+    blines=mute[1]-mute[0]+1 #número de linhas com buraco
+    vtimes=5 #número de vezes que um patch será colhido verticalmente
     l=len(lines)
     xl=len(lines[0])-size
     d=len(lines.T)-size
@@ -49,6 +52,15 @@ def make_imgs(lines,nimg,mode,size=256, mute=[264,401]):
                    np.repeat(np.arange(0,xl,step=xl//(rl+1),dtype='int'),l)[0:nimg],
                    np.repeat(np.arange(0,d,step=d//(rl+1),dtype='int'),l)[0:nimg]]
 
+        for i in range(nimg):
+            imgs.append(lines[samples[0][i]][samples[1][i]:samples[1][i]+size].T[samples[2][i]:samples[2][i]+size])
+    
+    if mode == 'reconstruction':
+        nimg=blines*vtimes*2 #(numero de linhas com buraco)*(numero de patches verticais)*(numero de buracos)
+        samples = [np.tile(np.arange(mute[0],mute[1],step=1,dtype='int'),vtimes*2)[0:nimg],
+                   np.repeat(np.array([62,597]),blines*vtimes)[0:nimg],
+                   np.repeat(np.arange(0,512,step=512//(vtimes-1),dtype='int'),blines*2)[0:nimg]]
+                   
         for i in range(nimg):
             imgs.append(lines[samples[0][i]][samples[1][i]:samples[1][i]+size].T[samples[2][i]:samples[2][i]+size])
 
@@ -72,7 +84,10 @@ def make_dataset(dir,nimg,nlines ,mute, phase, mode):
         tseis = seis[nlines+1:]
         seis = seis[:nlines+1]
         if phase == 'test': 
-            imgs , samples = make_imgs(tseis,nimg,mode=mode)
+            if mode=='reconstruction':
+                imgs, samples = make_imgs(seis,nimg,mode=mode)
+            else:
+                imgs , samples = make_imgs(tseis,nimg,mode=mode)
         else:
             imgs , samples = make_imgs(seis,nimg,mode=mode)
 

@@ -11,6 +11,8 @@ class TestOptions(BaseOptions):
         parser.add_argument('--which_epoch', type=str, default='20', help='which epoch to load? set to latest to use latest cached model')
         parser.add_argument('--how_many', type=int, default=1000, help='how many test images to run')
         parser.add_argument('--testing_mask_folder', type=str, default='masks/testing_masks', help='perpared masks for testing')
+        #CH: reconstruction option
+        parser.add_argument('--recon_voverlap',type=int,default=128, help='vertical ovelap between patches in reconstrution mode')
         self.isTrain = False
 
         return parser
