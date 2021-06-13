@@ -22,7 +22,7 @@ class SeismicDataset(BaseDataset):
             self.mask_folder = self.opt.training_mask_folder if self.opt.isTrain else self.opt.testing_mask_folder
             self.mask_paths = sorted(make_dataset(self.mask_folder))
 
-        if opt.smode=='sequential':
+        if opt.smode=='sequential' or 'reconstruction':
             transform_list = [transforms.ToTensor(), transforms.Normalize((self.A_mean),(self.A_max))]
         else:
             transform_list = [transforms.ToTensor(), transforms.Normalize((self.A_mean),(self.A_max)), transforms.RandomHorizontalFlip(p=0.5)]
@@ -70,7 +70,7 @@ class SeismicDataset(BaseDataset):
                 mask = Image.open(self.mask_paths[index % len(self.mask_paths)])
             mask = mask.resize((self.opt.fineSize, self.opt.fineSize), Image.NEAREST)
             mask = transforms.ToTensor()(mask)
-        
+                
         return {'A': A, 'B': B, 'A_F': A_flip, 'B_F': B_flip, 'M': mask,
                 'A_sample': A_sample_str}
 

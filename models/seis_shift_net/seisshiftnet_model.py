@@ -34,7 +34,7 @@ class SeisShiftNetModel(BaseModel):
                 self.rand_t = rand_t
                 self.rand_l = rand_l
                 return mask
-            #CH: inserting rectangular mask with ramdom width    
+            #CH: inserting central rectangular mask with ramdom width    
             elif self.opt.mask_sub_type == 'randw_rect':
                 mask, rand_t, rand_l = util.create_randw_fullrect_mask(self.opt)
                 self.rand_t = rand_t
@@ -46,9 +46,18 @@ class SeisShiftNetModel(BaseModel):
                 self.rand_t = rand_t
                 self.rand_l = rand_l
                 return mask
-
+            
             elif self.opt.mask_sub_type == 'island':
                 mask = util.wrapper_gmask(self.opt)
+        return mask
+    
+    #CH: a mask specific for reconstruction purposes
+    def create_recon_mask(self):
+        if self.opt.mask_type == 'reconstruction':
+            mask, rand_t, rand_l = util.create_reconstruction_mask(self.opt)
+            self.rand_t = rand_t
+            self.rand_l = rand_l
+            
         return mask
 
     def initialize(self, opt):
@@ -168,6 +177,10 @@ class SeisShiftNetModel(BaseModel):
                 # As generating random masks online are computation-heavy
                 # So just generate one ranodm mask for a batch images.
                 self.mask_global = self.mask_global.expand(self.opt.batchSize, *self.mask_global.size()[-3:])
+            #CH reconstruction mask online
+            elif self.opt.mask_type == 'reconstruction':
+                #batch size should be 1
+                self.mask_global=self.create_recon_mask(self.image_samples).type_as(self.mask_global).view(1, *self.mask_global.size()[-3:])
             else:
                 raise ValueError("Mask_type [%s] not recognized." % self.opt.mask_type)
         # For loading mask offline, we also need to change 'opt.mask_type' and 'opt.mask_sub_type'

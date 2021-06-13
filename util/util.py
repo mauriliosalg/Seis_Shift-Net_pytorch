@@ -266,13 +266,37 @@ def create_rand_fullrect_mask(opt):
     mask[0:opt.fineSize-1, wcoord:wcoord+mwidth] = 1
 
     return torch.ByteTensor(mask), 0, wcoord
+### function to obtain even width    
+def even_width(number):
+    if number%2==0:
+        return number
+    else:
+        return number+1
+### linear varing width for reconstruction
+def linear_width(line,xline):
+    if line>332 and xline==579:
+        return 128-even_width(line-332)
+    if line<=332 and xline==579:
+        return 58+even_width(line-262)
+    if line>340 and xline==62:
+        return 90-even_width(line-340)
+    if line<=340 and xline==62:
+        return 10+even_width(line-262)
 
 # Create a rectangular mask with tailored width
-def generate_personalized_mask(opt):
+def create_reconstruction_mask(opt,sample_str):
     h, w = opt.fineSize, opt.fineSize
     mask=np.zeros((h, w))
+    #split the string of samples in its components
+    sampleCoord = sample_str.split(sep="_")
+    line=int(sampleCoord[0])
+    xline=int(sampleCoord[1])
+    mwidth=linear_width(line,xline)
+    wcoord = w//2 - mwidth//2
     
-    return mask
+    mask[0:opt.fineSize-1, wcoord:wcoord+mwidth] = 1
+
+    return torch.ByteTensor(mask), 0, wcoord
 
 action_list = [[0, 1], [0, -1], [1, 0], [-1, 0]]
 def random_walk(canvas, ini_x, ini_y, length):
