@@ -274,9 +274,9 @@ def even_width(number):
         return number+1
 ### linear varing width for reconstruction
 def linear_width(line,xline):
-    if line>332 and xline==579:
+    if line>332 and xline==597:
         return 128-even_width(line-332)
-    if line<=332 and xline==579:
+    if line<=332 and xline==597:
         return 58+even_width(line-262)
     if line>340 and xline==62:
         return 90-even_width(line-340)
@@ -288,7 +288,7 @@ def create_reconstruction_mask(opt,sample_str):
     h, w = opt.fineSize, opt.fineSize
     mask=np.zeros((h, w))
     #split the string of samples in its components
-    sampleCoord = sample_str.split(sep="_")
+    sampleCoord = sample_str[0].split(sep="_")
     line=int(sampleCoord[0])
     xline=int(sampleCoord[1])
     mwidth=linear_width(line,xline)

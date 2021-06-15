@@ -52,9 +52,9 @@ class SeisShiftNetModel(BaseModel):
         return mask
     
     #CH: a mask specific for reconstruction purposes
-    def create_recon_mask(self):
+    def create_recon_mask(self,sample):
         if self.opt.mask_type == 'reconstruction':
-            mask, rand_t, rand_l = util.create_reconstruction_mask(self.opt)
+            mask, rand_t, rand_l = util.create_reconstruction_mask(self.opt,sample)
             self.rand_t = rand_t
             self.rand_l = rand_l
             

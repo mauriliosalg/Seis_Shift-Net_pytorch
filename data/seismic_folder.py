@@ -57,9 +57,9 @@ def make_imgs(lines,nimg,mode,size=256, mute=[264,401]):
     
     if mode == 'reconstruction':
         nimg=blines*vtimes*2 #(numero de linhas com buraco)*(numero de patches verticais)*(numero de buracos)
-        samples = [np.tile(np.arange(mute[0],mute[1]+1,step=1,dtype='int'),vtimes*2)[0:nimg],
-                   np.repeat(np.array([62,597]),blines*vtimes)[0:nimg],
-                   np.repeat(np.arange(0,640,step=512//(vtimes-1),dtype='int'),blines*2)[0:nimg]]
+        samples = [np.repeat(np.arange(mute[0],mute[1]+1,step=1,dtype='int'),vtimes*2)[0:nimg],
+                   np.tile(np.array([62,597]),blines*vtimes)[0:nimg],
+                  np.tile(np.repeat(np.arange(0,640,step=128,dtype='int'),2),blines)[0:nimg]]
                    
         for i in range(nimg):
             imgs.append(lines[samples[0][i]][samples[1][i]:samples[1][i]+size].T[samples[2][i]:samples[2][i]+size])
