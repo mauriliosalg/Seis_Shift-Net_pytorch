@@ -83,6 +83,9 @@ class BaseOptions():
         parser.add_argument('--nlines', type=int, default=700, help='number of seismic lines to use for training')
         parser.add_argument('--linemute', type=list, default=[264,401], help='line interval not to train')
         parser.add_argument('--smode', type=str, default='random', help='mode of chosing seismic images: sequential, random or reconstruction')
+        #CH: inclusion of validation option
+        parser.add_argument('--val', action='store_true',  help='validation set definition and loss computation')
+        parser.add_argument('--valsize', type=float, default=0.2, help='percentage of total dataset set for validation')
         #CH: mask options
         parser.add_argument('--mask_width', type=int, default=128, help='width of the rectangular mask')
         self.initialized = True

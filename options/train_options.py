@@ -30,9 +30,7 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
         parser.add_argument('--update_html_freq', type=int, default=1000, help='frequency of saving training results to html')
         parser.add_argument('--training_mask_folder', type=str, default='masks/training_masks', help='prepared masks for training')
-        #CH: inclusion of validation option
-        parser.add_argument('--val', action='store_true',  help='validation set definition and loss computation')
-        parser.add_argument('--valsize', type=float, default=0.2, help='percentage of total dataset set for validation')
+        
         self.isTrain = True
 
         return parser
