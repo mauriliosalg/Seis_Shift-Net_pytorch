@@ -41,10 +41,10 @@ def make_imgs(lines,nimg,mode,size=256, mute=[264,401]):
     
     if mode=='random': 
         #samples=[np.random.randint(0,high=l,size=nimg),np.random.randint(0,high=xl,size=nimg),np.random.randint(0,high=d,size=nimg)]
-        samples=[random_int_with_mute(l, mute,size=nimg),np.random.randint(0,high=xl,size=nimg),np.random.randint(0,high=d,size=nimg)]
+        line_samples=[random_int_with_mute(l, mute,size=nimg),np.random.randint(0,high=xl,size=nimg),np.random.randint(0,high=d,size=nimg)]
     
         for i in range(nimg):
-            imgs.append(lines[samples[0][i]][samples[1][i]:samples[1][i]+size].T[samples[2][i]:samples[2][i]+size])
+            imgs.append(lines[line_samples[0][i]][line_samples[1][i]:line_samples[1][i]+size].T[line_samples[2][i]:line_samples[2][i]+size])
    
     if mode=='sequential':
 
@@ -66,6 +66,30 @@ def make_imgs(lines,nimg,mode,size=256, mute=[264,401]):
 
     return imgs,samples
 
+def make_train_imgs(lines,xlines,nimg,mode,size=256, mute=[264,401],mutex=[668,778]):
+
+    imgs=[]
+    samples=[]
+    if mode=='random': 
+        l=len(lines) 
+        x=len(xlines)
+        xl=len(lines[0])-size
+        il=len(xlines[0])-size
+        d=len(lines.T)-size
+        
+        line_samples=[random_int_with_mute(l, mute,size=int(nimg/2)),np.random.randint(0,high=xl,size=int(nimg/2)),np.random.randint(0,high=d,size=int(nimg/2))]
+
+        xline_samples = [random_int_with_mute(x, mutex,size=int(nimg/2)),np.random.randint(0,high=il,size=int(nimg/2)),np.random.randint(0,high=d,size=int(nimg/2))]
+        
+        samples = [ np.concatenate((line_samples[0],xline_samples[0])),np.concatenate((line_samples[1],xline_samples[1])),np.concatenate((line_samples[2],xline_samples[2])) ]
+
+        for i in range(int(nimg/2)):
+            imgs.append(lines[line_samples[0][i]][line_samples[1][i]:line_samples[1][i]+size].T[line_samples[2][i]:line_samples[2][i]+size])
+        for i in range(int(nimg/2)):
+            imgs.append(xlines[xline_samples[0][i]][xline_samples[1][i]:xline_samples[1][i]+size].T[xline_samples[2][i]:xline_samples[2][i]+size])
+
+    return imgs,samples
+
 def make_dataset(dir,nimg,nlines ,mute, phase, mode):
     ### must have only one seismic file in dir###
     seismic = []
@@ -81,6 +105,7 @@ def make_dataset(dir,nimg,nlines ,mute, phase, mode):
     with segyio.open(seismic[0], iline=193, xline=197) as f:
         f.mmap()
         seis = segyio.tools.collect(f.iline[:])
+        
         tseis = seis[nlines+1:]
         seis = seis[:nlines+1]
         if phase == 'test': 
@@ -89,7 +114,8 @@ def make_dataset(dir,nimg,nlines ,mute, phase, mode):
             else:
                 imgs , samples = make_imgs(tseis,nimg,mode=mode)
         else:
-            imgs , samples = make_imgs(seis,nimg,mode=mode)
+            xseis= segyio.tools.collect(f.xline[:])
+            imgs , samples = make_train_imgs(seis,xseis,nimg,mode=mode)
 
     return imgs, samples, seis.mean(), seis.max()
 

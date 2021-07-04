@@ -235,7 +235,7 @@ def create_fullrect_mask(opt):
     mwidth = opt.mask_width
     assert mwidth<w, "please use a mask width smaller then the image width."
     mask = np.zeros((h, w))
-    wcoord = w//2 - mwidth//2
+    wcoord = int(w//2 - mwidth//2)
     
     mask[0:opt.fineSize-1, wcoord:wcoord+mwidth] = 1
 
