@@ -19,6 +19,8 @@ if __name__ == "__main__":
         print('#training images = %d' % train_size)
         print('#validation images = %d' % len(val_loader))
         val_losses=[]
+        val_nrms=[]
+        val_pearsonr=[]
         
     else:
         train_loader = data_loader.load_data()
@@ -26,6 +28,8 @@ if __name__ == "__main__":
         print('#training images = %d' % train_size)
 
     train_losses=[]
+    train_nrms=[]
+    train_pearsonr=[]
     model = create_model(opt)
     visualizer = Visualizer(opt)
 

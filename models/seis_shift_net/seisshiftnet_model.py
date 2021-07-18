@@ -66,8 +66,12 @@ class SeisShiftNetModel(BaseModel):
         self.isTrain = opt.isTrain
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv']
+        #CH accuracy measures names
+        self.acc_names = ['nrms','pearsonr']
+        #CH val loss and measures
         if self.opt.val:
             self.val_loss_name = ['Val_L1']
+            self.val_acc_names=['Val_nrms','Val_pearsonr']
         # specify the images you want to save/display. The program will call base_model.get_current_visuals
         if self.opt.show_flow:
             self.visual_names = ['real_A', 'fake_B', 'real_B', 'flow_srcs']
@@ -261,6 +265,14 @@ class SeisShiftNetModel(BaseModel):
 
             real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+        #CH adaptation for rect_const masks
+        if self.opt.mask_sub_type == 'rect_const':
+            # Using the cropped fake_B as the input of D.
+            fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
+                                            self.rand_l:self.rand_l+self.opt.mask_width]
+
+            real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
+                                            self.rand_l:self.rand_l+self.opt.mask_width]
 
         self.pred_fake = self.netD(fake_B.detach())
         self.pred_real = self.netD(real_B)
@@ -294,6 +306,15 @@ class SeisShiftNetModel(BaseModel):
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
             real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+        #CH adaptation for rect_const masks
+        elif self.opt.mask_sub_type == 'rect_const':
+            # Using the cropped fake_B as the input of D.
+            fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
+                                            self.rand_l:self.rand_l+self.opt.mask_width]
+
+            real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
+                                            self.rand_l:self.rand_l+self.opt.mask_width]
+        
         else:
             real_B = self.real_B
 
@@ -328,6 +349,17 @@ class SeisShiftNetModel(BaseModel):
                                                 self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
             mask_patch_real = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                         self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            # Using Discounting L1 loss
+            self.loss_G_L1_m += self.criterionL1_mask(mask_patch_fake, mask_patch_real)*self.opt.mask_weight_G
+
+        #CH adaptation for rect_const masks
+        if self.opt.mask_sub_type == 'rect_const':
+            # Using the cropped fake_B as the input of D.
+            mask_patch_fake = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
+                                            self.rand_l:self.rand_l+self.opt.mask_width]
+
+            mask_patch_real = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
+                                            self.rand_l:self.rand_l+self.opt.mask_width]
             # Using Discounting L1 loss
             self.loss_G_L1_m += self.criterionL1_mask(mask_patch_fake, mask_patch_real)*self.opt.mask_weight_G
 

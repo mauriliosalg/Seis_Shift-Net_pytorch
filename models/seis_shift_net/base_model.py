@@ -18,6 +18,8 @@ class BaseModel():
         self.loss_names = []
         self.val_loss_name =[]
         self.model_names = []
+        self.acc_names = []
+        self.val_acc_names = []
         self.visual_names = []
         self.image_paths = []
 
@@ -75,6 +77,24 @@ class BaseModel():
                 # float(...) works for both scalar tensor and float number
                 error_ret[name] = float(getattr(self, 'loss_' + name))
         return error_ret
+    
+    #CH return traning accuracy measures. train.py will print out these errors as debugging information
+    def get_current_acc(self):
+        acc_ret = OrderedDict()
+        for name in self.acc_names:
+            if isinstance(name, str):
+                # float(...) works for both scalar tensor and float number
+                acc_ret[name] = float(getattr(self, 'acc_' + name))
+        return acc_ret
+    
+    #CH return traning accuracy measures. train.py will print out these errors as debugging information
+    def get_val_acc(self):
+        val_acc_ret = OrderedDict()
+        for name in self.val_acc_names:
+            if isinstance(name, str):
+                # float(...) works for both scalar tensor and float number
+                val_acc_ret[name] = float(getattr(self, 'acc_' + name))
+        return val_acc_ret
     
     # save models to the disk
     def save_networks(self, which_epoch):
