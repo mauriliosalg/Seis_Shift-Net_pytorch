@@ -43,7 +43,8 @@ def tensor2seis(input_image, imtype=np.uint8):
         return image_numpy.astype(imtype)
     else:
         return input_image
-    
+  
+
 #CH plot a seismic figure:
 def plot_seis(input_image,clip=6,figsize=(20,20)):
     fig, axs = plt.subplots(nrows=1, ncols=1, figsize=figsize, facecolor='w', edgecolor='k',
@@ -154,6 +155,14 @@ def rm_extra_dim_seis(image):
     else:
         raise NotImplementedError
 
+#CH convert pytorch tensor to numpy array, single chanel, for metric calculation:
+def tensor2metric(input_image):
+    input_image=rm_extra_dim_seis(input_image)
+    if isinstance(input_image, torch.Tensor):
+        image_tensor = input_image.data
+        return image_tensor.cpu().float().numpy()
+    else:
+        return input_image  
 
 def diagnose_network(net, name='network'):
     mean = 0.0

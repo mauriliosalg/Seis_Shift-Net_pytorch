@@ -1,6 +1,8 @@
+from util.metrics import batch_nrms,batch_pearsonr
 import torch
 from torch.nn import functional as F
 import util.util as util
+from util import metrics
 from models import networks
 from models.seis_shift_net.base_model import BaseModel
 import time
@@ -66,12 +68,11 @@ class SeisShiftNetModel(BaseModel):
         self.isTrain = opt.isTrain
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv']
-        #CH accuracy measures names
-        self.acc_names = ['nrms','pearsonr']
+        #CH metric  names
+        self.metric_names = ['nrms','pearsonr']
         #CH val loss and measures
         if self.opt.val:
             self.val_loss_name = ['Val_L1']
-            self.val_acc_names=['Val_nrms','Val_pearsonr']
         # specify the images you want to save/display. The program will call base_model.get_current_visuals
         if self.opt.show_flow:
             self.visual_names = ['real_A', 'fake_B', 'real_B', 'flow_srcs']
@@ -266,14 +267,15 @@ class SeisShiftNetModel(BaseModel):
             real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
         #CH adaptation for rect_const masks
+        
         if self.opt.mask_sub_type == 'rect_const':
             # Using the cropped fake_B as the input of D.
             fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
-                                            self.rand_l:self.rand_l+self.opt.mask_width]
+                                            self.rand_l:self.rand_l+self.opt.mask_width-2*self.opt.overlap]
 
             real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
-                                            self.rand_l:self.rand_l+self.opt.mask_width]
-
+                                            self.rand_l:self.rand_l+self.opt.mask_width-2*self.opt.overlap]
+        
         self.pred_fake = self.netD(fake_B.detach())
         self.pred_real = self.netD(real_B)
 
@@ -306,17 +308,19 @@ class SeisShiftNetModel(BaseModel):
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
             real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
-        #CH adaptation for rect_const masks
+         #CH adaptation for rect_const masks
+        
         elif self.opt.mask_sub_type == 'rect_const':
             # Using the cropped fake_B as the input of D.
             fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
-                                            self.rand_l:self.rand_l+self.opt.mask_width]
+                                            self.rand_l:self.rand_l+self.opt.mask_width-2*self.opt.overlap]
 
             real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
-                                            self.rand_l:self.rand_l+self.opt.mask_width]
+                                            self.rand_l:self.rand_l+self.opt.mask_width-2*self.opt.overlap]
         
         else:
             real_B = self.real_B
+        
 
         pred_fake = self.netD(fake_B)
 
@@ -351,7 +355,8 @@ class SeisShiftNetModel(BaseModel):
                                         self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
             # Using Discounting L1 loss
             self.loss_G_L1_m += self.criterionL1_mask(mask_patch_fake, mask_patch_real)*self.opt.mask_weight_G
-
+        """
+        obs: ainda não consegui fazer a adaptação, precisa mexer na Discount_Loss
         #CH adaptation for rect_const masks
         if self.opt.mask_sub_type == 'rect_const':
             # Using the cropped fake_B as the input of D.
@@ -362,7 +367,7 @@ class SeisShiftNetModel(BaseModel):
                                             self.rand_l:self.rand_l+self.opt.mask_width]
             # Using Discounting L1 loss
             self.loss_G_L1_m += self.criterionL1_mask(mask_patch_fake, mask_patch_real)*self.opt.mask_weight_G
-
+        """
         self.loss_G = self.loss_G_L1 + self.loss_G_L1_m + self.loss_G_GAN
 
         # Then, add TV loss
@@ -404,6 +409,34 @@ class SeisShiftNetModel(BaseModel):
         self.backward_G()
         self.optimizer_G.step()
     
+    ### CH: Function to compute metrics for each batch
+    def compute_metrics(self):
+        
+        # First, G(A) should fake the discriminator
+        
+        fake_B = self.fake_B
+        # Has been verfied, for square mask, let D discrinate masked patch, improves the results.
+        if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect': 
+        # Using the cropped fake_B as the input of D.
+            fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+        #CH adaptation for rect_const masks
+        elif self.opt.mask_sub_type == 'rect_const':
+            # Using the cropped fake_B as the input of D.
+            fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
+                                            self.rand_l:self.rand_l+self.opt.mask_width]
+
+            real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
+                                            self.rand_l:self.rand_l+self.opt.mask_width]
+        
+        else:
+            real_B = self.real_B
+            
+        self.metric_nrms=batch_nrms(fake_B,real_B)
+        self.metric_pearsonr= batch_pearsonr(fake_B,real_B)
+
     def validate(self):
         with torch.no_grad():
             self.forward()

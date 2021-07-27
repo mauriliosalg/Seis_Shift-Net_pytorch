@@ -5,7 +5,8 @@ import time
 import sys
 from subprocess import Popen, PIPE
 from . import util, html
-from scipy.misc import imresize
+#from scipy.misc import imresize
+from skimage.transform import resize
 import matplotlib.pyplot as plt
 
 if sys.version_info[0] == 2:
@@ -48,9 +49,11 @@ def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256 , isse
         else:
             h, w, _ = im.shape
         if aspect_ratio > 1.0:
-            im = imresize(im, (h, int(w * aspect_ratio)), interp='bicubic')
+            im =  resize(im, (h, int(w * aspect_ratio)), order=3)
+            #im = imresize(im, (h, int(w * aspect_ratio)), interp='bicubic')
         if aspect_ratio < 1.0:
-            im = imresize(im, (int(h / aspect_ratio), w), interp='bicubic')
+            im =  resize(im, (int(h / aspect_ratio), w), order=3)
+            #im = imresize(im, (int(h / aspect_ratio), w), interp='bicubic')
         
         util.save_image(im, save_path)
 
@@ -224,6 +227,27 @@ class Visualizer():
                 'xlabel': 'epoch',
                 'ylabel': 'loss'},
             win=4)
+    #CH: function to plot metris        
+    def plot_mean_metrics(self,epoch,opt,list_metrics):
+        if not hasattr(self, 'plot_metrics'):
+            self.plot_metrics=[]
+            for m in list_metrics:
+                self.plot_metrics.append({'X': [], 'Y': [], 'legend': list(m.keys())})
+        
+        for i,metrics in enumerate(list_metrics):
+            
+            self.plot_metrics[i]['X'].append(epoch)
+            self.plot_metrics[i]['Y'].append([metrics[k] for k in self.plot_metrics[i]['legend']])
+            
+            self.vis.line(
+                X=np.array(self.plot_metrics[i]['X']),
+                Y=np.array(self.plot_metrics[i]['Y']),
+                opts={
+                    'title': self.name + ' mean metrics over time',
+                    'legend': self.plot_metrics[i]['legend'],
+                    'xlabel': 'epoch',
+                    'ylabel': 'Metric Values'},
+                win=5+i)
 
     # losses: same format as |losses| of plot_current_losses
     def print_current_losses(self, epoch, i, losses, t, t_data):
@@ -231,6 +255,14 @@ class Visualizer():
         for k, v in losses.items():
             message += '%s: %.3f ' % (k, v)
 
+        print(message)
+        with open(self.log_name, "a") as log_file:
+            log_file.write('%s\n' % message)
+    #CH: funtion to print metrics
+    def print_metrics(self, metrics):
+        message = 'Metrics Results for epoch -> '
+        for k, v in metrics.items():
+            message += '%s: %.3f ' % (k, v)
         print(message)
         with open(self.log_name, "a") as log_file:
             log_file.write('%s\n' % message)

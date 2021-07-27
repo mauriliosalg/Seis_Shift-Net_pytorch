@@ -50,7 +50,8 @@ class BaseOptions():
         parser.add_argument('--stride', type=int, default=1, help='should be dense, 1 is a good option.')
         parser.add_argument('--shift_sz', type=int, default=1, help='shift_sz>1 only for \'soft_shift_patch\'.')
         parser.add_argument('--mask_thred', type=int, default=1, help='number to decide whether a patch is masked')
-        parser.add_argument('--overlap', type=int, default=4, help='the overlap for center mask')
+        #CH: default was originaly 4
+        parser.add_argument('--overlap', type=int, default=0, help='the overlap for center mask')
         parser.add_argument('--bottleneck', type=int, default=512, help='neurals of fc')
         parser.add_argument('--gp_lambda', type=float, default=10.0, help='gradient penalty coefficient')
         parser.add_argument('--constrain', type=str, default='MSE', help='guidance loss type')
@@ -88,6 +89,8 @@ class BaseOptions():
         parser.add_argument('--valsize', type=float, default=0.2, help='percentage of total dataset set for validation')
         #CH: mask options
         parser.add_argument('--mask_width', type=int, default=128, help='width of the rectangular mask')
+        #CH: metrics options
+        parser.add_argument('--metrics', action='store_true', help='if specified, print more debugging information')
         self.initialized = True
         return parser
 

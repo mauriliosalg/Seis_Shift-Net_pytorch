@@ -18,8 +18,7 @@ class BaseModel():
         self.loss_names = []
         self.val_loss_name =[]
         self.model_names = []
-        self.acc_names = []
-        self.val_acc_names = []
+        self.metric_names = []
         self.visual_names = []
         self.image_paths = []
 
@@ -78,23 +77,22 @@ class BaseModel():
                 error_ret[name] = float(getattr(self, 'loss_' + name))
         return error_ret
     
-    #CH return traning accuracy measures. train.py will print out these errors as debugging information
-    def get_current_acc(self):
-        acc_ret = OrderedDict()
-        for name in self.acc_names:
+    #CH return metrics values
+    def get_current_metrics(self):
+        metrics_ret = OrderedDict()
+        for name in self.metric_names:
             if isinstance(name, str):
-                # float(...) works for both scalar tensor and float number
-                acc_ret[name] = float(getattr(self, 'acc_' + name))
-        return acc_ret
+                metrics_ret[name] = float(getattr(self, 'metric_'+name))
+        return metrics_ret
     
     #CH return traning accuracy measures. train.py will print out these errors as debugging information
-    def get_val_acc(self):
-        val_acc_ret = OrderedDict()
-        for name in self.val_acc_names:
+    def get_val_metrics(self):
+        val_metrics_ret = OrderedDict()
+        for name in self.val_metric_names:
             if isinstance(name, str):
                 # float(...) works for both scalar tensor and float number
-                val_acc_ret[name] = float(getattr(self, 'acc_' + name))
-        return val_acc_ret
+                val_metrics_ret[name] = float(getattr(self, 'metric_' + name))
+        return val_metrics_ret
     
     # save models to the disk
     def save_networks(self, which_epoch):

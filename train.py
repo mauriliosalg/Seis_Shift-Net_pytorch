@@ -19,8 +19,6 @@ if __name__ == "__main__":
         print('#training images = %d' % train_size)
         print('#validation images = %d' % len(val_loader))
         val_losses=[]
-        val_nrms=[]
-        val_pearsonr=[]
         
     else:
         train_loader = data_loader.load_data()
@@ -28,8 +26,6 @@ if __name__ == "__main__":
         print('#training images = %d' % train_size)
 
     train_losses=[]
-    train_nrms=[]
-    train_pearsonr=[]
     model = create_model(opt)
     visualizer = Visualizer(opt)
 
@@ -42,6 +38,7 @@ if __name__ == "__main__":
         iter_data_time = time.time()
         epoch_iter = 0
         total_loss = 0
+        train_metrics=OrderedDict()
         for i, data in enumerate(train_loader):
             iter_start_time = time.time()
             if total_steps % opt.print_freq == 0:
@@ -82,6 +79,15 @@ if __name__ == "__main__":
 
             #CH: Get L1 losses to compute mean over epoch
             total_loss += visualizer.get_loss_value(model.get_current_losses(),'G_L1')
+            #CH: Get metrics to compute mean over epoch
+            if opt.metrics:
+                model.compute_metrics()
+                current_metrics = model.get_current_metrics()
+                if epoch_iter==1:
+                    for key in current_metrics.keys():
+                        train_metrics[key]=0
+                for key in current_metrics.keys():
+                    train_metrics[key]+=current_metrics[key]
 
             iter_data_time = time.time()
             #print('final: ', time.time()-iter_start_time)
@@ -89,7 +95,18 @@ if __name__ == "__main__":
         #CH:compute mean over epoch
         tloss=total_loss/epoch_iter
         train_losses.append(tloss)
-        print('train Loss: %.3f ' % (tloss)) 
+        print('train Loss: %.3f ' % (tloss))
+
+        if opt.metrics:
+            train_metrics = {k: v / epoch_iter for k, v in train_metrics.items()}
+            visualizer.print_metrics(train_metrics)
+            #pair train and validation of each metric
+            t_v_metric=[] # is a list of ordered dicts
+            # The metrics have different scales, so we separate the metrics,
+            # to plot with the correspondent validation metrics
+            for i, (k,v) in enumerate(train_metrics.items()):
+                t_v_metric.append(OrderedDict())
+                t_v_metric[i][k]=v
 
         if epoch % opt.save_epoch_freq == 0:
             print('saving the model at the end of epoch %d, iters %d' %
@@ -97,32 +114,51 @@ if __name__ == "__main__":
             model.save_networks('latest')
             if not opt.only_lastest:
                 model.save_networks(epoch)
-
+        #train and val mean losses for plotting
+        #here we get the trainloss
+        t_v_loss=OrderedDict()
+        t_v_loss['train']=tloss
         #CH: Validation computation
         if opt.val:
             total_loss=0
-            for i, data in enumerate(val_loader):
+            val_metrics=OrderedDict()
+            for viter, data in enumerate(val_loader):
                 model.set_input(data)
                 model.validate()
                 #get individual val loss
                 loss = model.get_val_loss()
                 total_loss += visualizer.get_loss_value(loss,'Val_L1')
+                if opt.metrics:
+                    model.compute_metrics()
+                    current_metrics = model.get_current_metrics()
+                    if viter==0:
+                        for key in current_metrics.keys():
+                            val_metrics['Val_'+key]=0
+                    for key in current_metrics.keys():
+                        val_metrics['Val_'+key]+=current_metrics[key]
             #mean val loss
-            vloss=total_loss/i
+            vloss=total_loss/viter
             val_losses.append(vloss)
             print('Validation Loss: %.3f ' % (vloss))
-            
-            t_v_loss=OrderedDict()
-            t_v_loss['train']=tloss
+            #mean val metric
+            for i, (k,v) in enumerate(val_metrics.items()):
+                val_metrics[k] = v/viter
+                t_v_metric[i][k]=v/viter #separating for plot with correspondent train metric
+            visualizer.print_metrics(val_metrics) 
+            #here we get the valloss
             t_v_loss['validation']=vloss
-            visualizer.plot_mean_losses(epoch, opt, t_v_loss)
-            
+        #plot train val losses
+        visualizer.plot_mean_losses(epoch, opt, t_v_loss)
+        #plot train and val metrics
+        visualizer.plot_mean_metrics(epoch,opt,t_v_metric)
         print('End of epoch %d / %d \t Time Taken: %d sec' %
                 (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
         model.update_learning_rate()
+    """
     t_v_loss=OrderedDict()
     t_v_loss['train']=train_losses
     if opt.val:
         t_v_loss['validation']=val_losses
     #visualizer.save_loss_plot(t_v_loss,opt)
+    """
     print('Total elapsed time: %d min' % ((time.time()-train_start_time)/60))
