@@ -28,7 +28,7 @@ class BaseOptions():
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2, use \'-1 \' for cpu training/testing')
         parser.add_argument('--dataset_mode', type=str, default='aligned', help='chooses how datasets are loaded. [aligned | aligned_resized | single]')
         parser.add_argument('--nThreads', default=2, type=int, help='# threads for loading data')
-        parser.add_argument('--checkpoints_dir', type=str, default='./log', help='models are saved here')
+        parser.add_argument('--checkpoints_dir', type=str, default='/scratch/maurilio/log', help='models are saved here')
         parser.add_argument('--norm', type=str, default='instance', help='[instance|batch|switchable] normalization')
         parser.add_argument('--serial_batches', action='store_true', help='if true, takes images in order to make batches, otherwise takes them randomly')
         parser.add_argument('--display_winsize', type=int, default=256,  help='display window size')
