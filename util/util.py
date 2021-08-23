@@ -291,7 +291,21 @@ def linear_width(line,xline):
         return 90-even_width(line-340)
     if line<=340 and xline==62:
         return 10+even_width(line-262)
-
+#CH linear width did not work
+# size of width must be fixed
+# this function will change width with position of the hole
+### !!!por enquanto nao está completa!!!###
+def fixed_width(line,xline):
+    if xline==597:
+        if line>=276 and line<=380:
+            return 124
+        else:
+            return 96
+    if xline==62:
+        if line>=266 and line<=380:
+            return 96
+        else:
+            return 68
 # Create a rectangular mask with tailored width
 def create_reconstruction_mask(opt,sample_str):
     h, w = opt.fineSize, opt.fineSize
@@ -300,7 +314,7 @@ def create_reconstruction_mask(opt,sample_str):
     sampleCoord = sample_str[0].split(sep="_")
     line=int(sampleCoord[0])
     xline=int(sampleCoord[1])
-    mwidth=linear_width(line,xline)
+    mwidth=fixed_width(line,xline)
     wcoord = w//2 - mwidth//2
     
     mask[0:opt.fineSize-1, wcoord:wcoord+mwidth] = 1

@@ -53,8 +53,14 @@ class Discounted_L1(nn.Module):
     def __init__(self, opt):
         super(Discounted_L1, self).__init__()
         # Register discounting template as a buffer
-        self.register_buffer('discounting_mask', torch.tensor(spatial_discounting_mask(opt.fineSize//2 - opt.overlap * 2, opt.fineSize//2 - opt.overlap * 2, 0.9, opt.discounting)))
-        self.L1 = nn.L1Loss()
+        #CH: Original discounting assumes square mask
+        # Here we modify the  function in order to accept rectangular masks
+        if opt.mask_sub_type == 'rect_const':
+            self.register_buffer('discounting_mask', torch.tensor(spatial_discounting_mask(opt.fineSize-1, opt.mask_width- opt.overlap * 2, 0.9, opt.discounting)))
+            self.L1 = nn.L1Loss()
+        else:  
+            self.register_buffer('discounting_mask', torch.tensor(spatial_discounting_mask(opt.fineSize//2 - opt.overlap * 2, opt.fineSize//2 - opt.overlap * 2, 0.9, opt.discounting)))
+            self.L1 = nn.L1Loss()
 
     def forward(self, input, target):
         self._assert_no_grad(target)

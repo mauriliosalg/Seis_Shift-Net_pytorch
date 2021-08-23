@@ -355,19 +355,19 @@ class SeisShiftNetModel(BaseModel):
                                         self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
             # Using Discounting L1 loss
             self.loss_G_L1_m += self.criterionL1_mask(mask_patch_fake, mask_patch_real)*self.opt.mask_weight_G
-        """
-        obs: ainda não consegui fazer a adaptação, precisa mexer na Discount_Loss
+        
+        #obs: ainda não consegui fazer a adaptação, precisa mexer na #Discount_Loss
         #CH adaptation for rect_const masks
         if self.opt.mask_sub_type == 'rect_const':
             # Using the cropped fake_B as the input of D.
             mask_patch_fake = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
-                                            self.rand_l:self.rand_l+self.opt.mask_width]
+                                            self.rand_l:self.rand_l+self.opt.mask_width-2*self.opt.overlap]
 
             mask_patch_real = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize-1, \
-                                            self.rand_l:self.rand_l+self.opt.mask_width]
+                                            self.rand_l:self.rand_l+self.opt.mask_width-2*self.opt.overlap]
             # Using Discounting L1 loss
             self.loss_G_L1_m += self.criterionL1_mask(mask_patch_fake, mask_patch_real)*self.opt.mask_weight_G
-        """
+        
         self.loss_G = self.loss_G_L1 + self.loss_G_L1_m + self.loss_G_GAN
 
         # Then, add TV loss
