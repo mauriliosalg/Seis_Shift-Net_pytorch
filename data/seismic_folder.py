@@ -6,7 +6,6 @@
 ###############################################################################
 
 import torch.utils.data as data
-
 import segyio
 from PIL import Image
 import os
@@ -104,10 +103,10 @@ def make_dataset(dir,nimg,nlines ,mute, phase, mode):
     print(seismic[0])
     with segyio.open(seismic[0], iline=193, xline=197) as f:
         f.mmap()
-        seis = segyio.tools.collect(f.iline[:])
+        seisdata = segyio.tools.collect(f.iline[:])
         
-        tseis = seis[nlines+1:]
-        seis = seis[:nlines+1]
+        tseis = seisdata[nlines+1:]
+        seis = seisdata[:nlines+1]
         if phase == 'test': 
             if mode=='reconstruction':
                 imgs, samples = make_imgs(seis,nimg,mode=mode)
@@ -117,7 +116,7 @@ def make_dataset(dir,nimg,nlines ,mute, phase, mode):
             xseis= segyio.tools.collect(f.xline[:])
             imgs , samples = make_train_imgs(seis,xseis,nimg,mode=mode)
 
-    return imgs, samples, seis.mean(), seis.max()
+    return imgs, samples, seis.mean(), seis.max(), seisdata
 
 
 def default_loader(path):

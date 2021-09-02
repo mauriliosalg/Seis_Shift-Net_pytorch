@@ -43,7 +43,17 @@ def tensor2seis(input_image, imtype=np.uint8):
         return image_numpy.astype(imtype)
     else:
         return input_image
-  
+#CH: functions to save and load, metrics and losses
+def save_array(dirpath,array,name, which_epoch):
+    if type(array) == list:
+        array=np.array(array)
+    save_filename = '%s_%s' % (which_epoch, name)
+    np.save(os.path.join(dirpath,save_filename),array)
+    
+def load_array(dirpath,name,which_epoch):
+    save_filename = '%s_%s.npy' % (which_epoch, name) 
+    return np.load(os.path.join(dirpath,save_filename))
+
 
 #CH plot a seismic figure:
 def plot_seis(input_image,clip=6,figsize=(20,20)):

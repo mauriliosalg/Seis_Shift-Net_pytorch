@@ -5,8 +5,9 @@ from options.train_options import TrainOptions
 from data.data_loader import CreateDataLoader
 from models import create_model
 from util.visualizer import Visualizer
-from util.util import Logger
+from util.util import Logger, save_array, load_array
 from collections import OrderedDict
+import numpy as np
 
 if __name__ == "__main__":
 
@@ -19,19 +20,26 @@ if __name__ == "__main__":
         print('#training images = %d' % train_size)
         print('#validation images = %d' % len(val_loader))
         val_losses=[]
-        
+        val_metrics_dict=OrderedDict()
     else:
         train_loader = data_loader.load_data()
         train_size = len(train_loader)
         print('#training images = %d' % train_size)
 
     train_losses=[]
+    train_metrics_dict=OrderedDict()
     model = create_model(opt)
     visualizer = Visualizer(opt)
-
+    save_dir=getattr(model, 'save_dir')
     total_steps = 0
 
     train_start_time=time.time()
+
+    if opt.continue_train:
+        opt.epoch_count=int(opt.which_epoch)+1
+        train_losses=load_array(save_dir,'train_loss',opt.which_epoch).tolist()
+        if opt.val:
+                    val_losses=load_array(save_dir,'val_loss',opt.which_epoch).tolist()
     
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
         epoch_start_time = time.time()
@@ -98,6 +106,10 @@ if __name__ == "__main__":
         print('train Loss: %.3f ' % (tloss))
 
         if opt.metrics:
+            if epoch == 1:
+                train_metrics_dict = {k: []  for k in train_metrics.keys()}
+            if opt.continue_train and epoch==opt.epoch_count:
+                train_metrics_dict = {k: load_array(save_dir,k,opt.which_epoch).tolist()  for k in train_metrics.keys()}
             train_metrics = {k: v / epoch_iter for k, v in train_metrics.items()}
             visualizer.print_metrics(train_metrics)
             #pair train and validation of each metric
@@ -107,13 +119,9 @@ if __name__ == "__main__":
             for i, (k,v) in enumerate(train_metrics.items()):
                 t_v_metric.append(OrderedDict())
                 t_v_metric[i][k]=v
+                train_metrics_dict[k].append(v)
 
-        if epoch % opt.save_epoch_freq == 0:
-            print('saving the model at the end of epoch %d, iters %d' %
-                    (epoch, total_steps))
-            model.save_networks('latest')
-            if not opt.only_lastest:
-                model.save_networks(epoch)
+        
         #train and val mean losses for plotting
         #here we get the trainloss
         t_v_loss=OrderedDict()
@@ -141,12 +149,37 @@ if __name__ == "__main__":
             val_losses.append(vloss)
             print('Validation Loss: %.3f ' % (vloss))
             #mean val metric
-            for i, (k,v) in enumerate(val_metrics.items()):
-                val_metrics[k] = v/viter
-                t_v_metric[i][k]=v/viter #separating for plot with correspondent train metric
-            visualizer.print_metrics(val_metrics) 
+            if opt.metrics:
+                if epoch == 1: #initialize for first run
+                    val_metrics_dict = {k: []  for k in val_metrics.keys()}
+                if opt.continue_train and epoch==opt.epoch_count: #initialize for continue_train
+                    val_metrics_dict = {k: load_array(save_dir,k,opt.which_epoch).tolist()  for k in val_metrics.keys()}
+                for i, (k,v) in enumerate(val_metrics.items()):
+                    val_metrics[k] = v/viter
+                    t_v_metric[i][k]=v/viter #separating for plot with correspondent train metric
+                    val_metrics_dict[k].append(v/viter)
+                visualizer.print_metrics(val_metrics) 
             #here we get the valloss
             t_v_loss['validation']=vloss
+    #CH saving losses and metrics arrays for retraining from given point.
+        if epoch % opt.save_epoch_freq == 0:
+            print('saving the model at the end of epoch %d, iters %d' %
+                    (epoch, total_steps))
+            model.save_networks('latest')
+            if not opt.only_lastest:
+                model.save_networks(epoch)
+                save_array(save_dir,train_losses,'train_loss',epoch)
+
+                if opt.val:
+                    save_array(save_dir,val_losses,'val_loss',epoch)
+                
+                if opt.metrics:
+                    for k in train_metrics_dict.keys():
+                        save_array(save_dir,train_metrics_dict[k],k,epoch)
+                    if opt.val:
+                        for k in val_metrics_dict.keys():
+                            save_array(save_dir,val_metrics_dict[k],k,epoch)
+
         #plot train val losses
         visualizer.plot_mean_losses(epoch, opt, t_v_loss)
         #plot train and val metrics

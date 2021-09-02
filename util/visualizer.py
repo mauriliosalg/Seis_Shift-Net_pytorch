@@ -4,6 +4,7 @@ import ntpath
 import time
 import sys
 from subprocess import Popen, PIPE
+from PIL import Image
 from . import util, html
 #from scipy.misc import imresize
 from skimage.transform import resize
@@ -61,6 +62,21 @@ def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256 , isse
         txts.append(label)
         links.append(image_name)
     webpage.add_images(ims, txts, links, width=width)
+
+#CH: Plot and save seismic image
+def plot_seis(image,clip=200,cmap=plt.cm.Greys,figname="secao_sismica"):
+    figsize=(20,20)
+    clip = 200
+    vmin, vmax = -clip, clip
+    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=figsize, facecolor='w', edgecolor='k', squeeze=False, sharex=True)
+    axs = axs.ravel()
+    axs[0].imshow(image, cmap=plt.cm.Greys, vmin=vmin, vmax=vmax)
+    plt.savefig(figname)
+
+def save_seis_image(data,figname="secao_sismica.jpg"):
+    rescaled = (255.0 / data.max() * (data - data.min())).astype(np.uint8)
+    im = Image.fromarray(rescaled)
+    im.save(figname)
 
 class Visualizer():
     def __init__(self, opt):
@@ -283,5 +299,5 @@ class Visualizer():
         ax.legend()
         ax.set_title('Train & Val Losses x Epochs', fontsize=20)
         plt.savefig(os.path.join(opt.checkpoints_dir, opt.name,"losses.jpg"))
-
-
+    
+    

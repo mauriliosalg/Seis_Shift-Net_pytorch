@@ -16,7 +16,7 @@ class SeismicDataset(BaseDataset):
         self.nseisimg=opt.nseisimg
         self.nlines=opt.nlines
         self.linemute=opt.linemute
-        self.A_imgs, self.A_samples,self.A_mean,self.A_max = make_dataset(self.dir_A,self.nseisimg,self.nlines,self.linemute,opt.phase,opt.smode)
+        self.A_imgs, self.A_samples,self.A_mean,self.A_max,self.seis_data= make_dataset(self.dir_A,self.nseisimg,self.nlines,self.linemute,opt.phase,opt.smode)
         
         if self.opt.offline_loading_mask:
             self.mask_folder = self.opt.training_mask_folder if self.opt.isTrain else self.opt.testing_mask_folder

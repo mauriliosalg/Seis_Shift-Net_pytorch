@@ -30,7 +30,7 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
         parser.add_argument('--update_html_freq', type=int, default=1000, help='frequency of saving training results to html')
         parser.add_argument('--training_mask_folder', type=str, default='masks/training_masks', help='prepared masks for training')
-        
+        #CH: option for recovery of training models, losses and metrics
         self.isTrain = True
 
         return parser

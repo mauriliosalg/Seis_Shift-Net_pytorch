@@ -107,6 +107,12 @@ class BaseModel():
                     net.cuda(self.gpu_ids[0])
                 else:
                     torch.save(net.cpu().state_dict(), save_path)
+    
+    def save_metrics(metrics,which_epoch):
+        for name in self.metrics_names:
+            if isinstance(name, str):
+                save_filename = '%s_net_%s.pth' % (which_epoch, name)
+                save_path = os.path.join(self.save_dir, save_filename)
 
 
     def __patch_instance_norm_state_dict(self, state_dict, module, keys, i=0):
