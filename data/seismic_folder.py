@@ -40,10 +40,10 @@ def make_imgs(lines,nimg,mode,size=256, mute=[264,401]):
     
     if mode=='random': 
         #samples=[np.random.randint(0,high=l,size=nimg),np.random.randint(0,high=xl,size=nimg),np.random.randint(0,high=d,size=nimg)]
-        line_samples=[random_int_with_mute(l, mute,size=nimg),np.random.randint(0,high=xl,size=nimg),np.random.randint(0,high=d,size=nimg)]
+        samples=[random_int_with_mute(l, mute,size=nimg),np.random.randint(0,high=xl,size=nimg),np.random.randint(0,high=d,size=nimg)]
     
         for i in range(nimg):
-            imgs.append(lines[line_samples[0][i]][line_samples[1][i]:line_samples[1][i]+size].T[line_samples[2][i]:line_samples[2][i]+size])
+            imgs.append(lines[samples[0][i]][samples[1][i]:samples[1][i]+size].T[samples[2][i]:samples[2][i]+size])
    
     if mode=='sequential':
 
