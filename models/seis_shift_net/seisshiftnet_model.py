@@ -1,4 +1,4 @@
-from util.metrics import batch_nrms,batch_pearsonr
+from util.metrics import batch_nrms,batch_pearsonr,batch_ssim,batch_psnr
 import torch
 from torch.nn import functional as F
 import util.util as util
@@ -69,7 +69,7 @@ class SeisShiftNetModel(BaseModel):
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv']
         #CH metric  names
-        self.metric_names = ['nrms','pearsonr']
+        self.metric_names = ['nrms','pearsonr','ssim','psnr']
         #CH val loss and measures
         if self.opt.val:
             self.val_loss_name = ['Val_L1']
@@ -436,6 +436,8 @@ class SeisShiftNetModel(BaseModel):
             
         self.metric_nrms=batch_nrms(fake_B,real_B)
         self.metric_pearsonr= batch_pearsonr(fake_B,real_B)
+        self.metric_ssim=batch_ssim(fake_B,real_B)
+        self.metric_psnr=batch_psnr(fake_B,real_B)
 
     def validate(self):
         with torch.no_grad():

@@ -1,5 +1,7 @@
 from collections import OrderedDict
 import numpy as np
+from skimage.metrics import structural_similarity as ssim
+from skimage.metrics import peak_signal_noise_ratio as psnr
 from . import util
 
 def rms (a):
@@ -12,7 +14,7 @@ def nrms1D(im1,im2):
     return nrms
 
 def batch_nrms(im1,im2):
-    #aasumes tensor input
+    #assumes tensor input
     
     assert im1.size() == im2.size(), "images must have the same shape"
     im1,im2=util.tensor2metric(im1),util.tensor2metric(im2)
@@ -44,6 +46,32 @@ def batch_pearsonr(im1,im2):
             pr+=channel_pr/len(im1[0,0,0,:])
         batch_pr+=pr/len(im1[0])
     return batch_pr/len(im1)
+
+def batch_ssim(im1,im2):
+    #assumes tensor input
+    assert im1.size() == im2.size(), "images must have the same shape"
+    im1,im2=util.tensor2metric(im1),util.tensor2metric(im2)
+    #### batch loop ###
+    batch_ssim=0
+    channel_ssim=0
+    for n in range(len(im1)):
+        for c in range(len(im1[0])):
+            channel_ssim+=ssim(im1[n,c,:,:], im2[n,c,:,:])
+        batch_ssim += channel_ssim/len(im1[0])
+    return batch_ssim/len(im1)
+
+def batch_psnr(im1,im2):
+    #assumes tensor input
+    assert im1.size() == im2.size(), "images must have the same shape"
+    im1,im2=util.tensor2metric(im1),util.tensor2metric(im2)
+    #### batch loop ###
+    batch_psnr=0
+    channel_psnr=0
+    for n in range(len(im1)):
+        for c in range(len(im1[0])):
+            channel_psnr+=psnr(im1[n,c,:,:], im2[n,c,:,:])
+        batch_psnr += channel_psnr/len(im1[0])
+    return batch_psnr/len(im1)
 
 #Function to pair train and validation of each metric
 #inputs should be ordered dicts
