@@ -31,7 +31,6 @@ class InnerShiftTripleFunction(torch.autograd.Function):
         # None batch version
         bNonparm = Batch_NonShift()
         ctx.shift_offsets = []
-
         # batch version
         cosine, latter_windows, i_2, i_3, i_1 = bNonparm.cosine_similarity(former_all.clone(), latter_all.clone(), 1, stride, flag)
 

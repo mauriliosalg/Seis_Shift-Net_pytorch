@@ -16,6 +16,9 @@ class TestOptions(BaseOptions):
         parser.add_argument('--data_recon_dir', type=str, default='./', help='dir to store the reconstructed data')
         parser.add_argument('--data_recon_name', type=str, default='dado_cut_recon',help='name of the reconstructed seismic data')
         parser.add_argument('--plot_line', type=int , default=330, help='line to save an image of before and after reconstruction')
+        parser.add_argument('--save_numpy', action='store_true', help='save numpy images for figures generation')
+        parser.add_argument('--save_recon', action='store_true', help='save numpy images for figures generation')
+        parser.add_argument('--sgy_recon_dir', type=str, default='/scratch/maurilio/sismica_recon', help='dir to store the reconstructed data sgy file')
         self.isTrain = False
 
         return parser

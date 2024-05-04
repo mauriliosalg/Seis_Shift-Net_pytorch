@@ -3,7 +3,7 @@ import os
 from options.test_options import TestOptions
 from data.data_loader import CreateDataLoader
 from models import create_model
-from util.visualizer import save_images
+from util.visualizer import save_images, save_numpy
 from util import html
 from collections import OrderedDict
 import numpy as np
@@ -23,6 +23,8 @@ if __name__ == "__main__":
 
     test_start_time=time.time()
     data_loader = CreateDataLoader(opt)
+    media= getattr(data_loader.dataset, 'A_mean')
+    maximo = getattr(data_loader.dataset, 'A_max') 
     dataset = data_loader.load_data()
     model = create_model(opt)
 
@@ -56,15 +58,18 @@ if __name__ == "__main__":
         img_path = model.get_image_paths()
         print('process image... %s' % img_path)
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, isseismic=isseismic)
+        if opt.save_numpy:
+            save_numpy(web_dir,visuals, img_path,media=media,maximo=maximo)
+
     webpage.save()
     print(web_dir)
-    print("Number of Images Processed: %d" % (i+1))
+    print("Number of Images Processed: %d" % (i))
     print("total elapsed time: %d min" % ((time.time()-test_start_time)/60))
     if opt.metrics:
         file = open(os.path.join(web_dir,'results.txt'), "w")
         for key in test_metrics.keys():
             print('The mean value of the '+key+'metric for the test set was: {}'.format(np.array(test_metrics[key]).mean()))
             file.write('The mean value of the '+key+'metric for the test set was: {} \n'.format(np.array(test_metrics[key]).mean()))
-        file.write('The total number of images processed was: {} \n'.format(i+1))
+        file.write('The total number of images processed was: {} \n'.format(i))
         file.close()
     

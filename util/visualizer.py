@@ -15,6 +15,19 @@ if sys.version_info[0] == 2:
 else:
     VisdomExceptionBase = ConnectionError
 
+def save_numpy(web_dir,visuals, image_path, media, maximo):
+    image_dir=os.path.join(web_dir,'image_numpy')
+    if not os.path.exists(image_dir):
+            os.makedirs(image_dir)
+    short_path = ntpath.basename(image_path[0])
+    name = os.path.splitext(short_path)[0]
+    for label, im_data in visuals.items():
+        im = util.tensor2metric(im_data)
+        im=(im*maximo) + media       
+        image_name = '%s_%s' % (name, label)
+        save_path = os.path.join(image_dir, image_name)
+        np.save(save_path,im[0,0])
+
 def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256 , isseismic=False):
     """Save images to the disk.
     Parameters:
@@ -72,6 +85,26 @@ def plot_seis(image,clip=200,cmap=plt.cm.Greys,figname="secao_sismica"):
     axs = axs.ravel()
     axs[0].imshow(image, cmap=plt.cm.Greys, vmin=vmin, vmax=vmax)
     plt.savefig(figname)
+
+def plot_compara(im1,im2,clip=200,cmap=plt.cm.Greys,figname="secao_sismica"):
+    figsize=(20,20)
+    clip = 200
+    vmin, vmax = -clip, clip
+    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=figsize, facecolor='w', edgecolor='k', squeeze=False, sharex=True)
+ 
+    im=axs[0][0].imshow(im1, cmap=cmap, vmin=vmin, vmax=vmax)
+    axs[0][0].set_title('(a) Antes' , fontsize=20)
+    axs[1][0].imshow(im2, cmap=cmap, vmin=vmin, vmax=vmax)
+    axs[1][0].set_title('(b) Depois', fontsize=20)
+    axs[1][0].set_xlabel('Crosslines', fontsize=20)
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.85, 0.15, 0.01, 0.7])
+    fig.colorbar(im, cax=cbar_ax)
+    #fig.text(0.5, 0.05, 'Crosslines', ha='center')
+    fig.text(0.05, 0.5, 'Amostras em Profundidade', va='center', rotation='vertical', fontsize=20)
+    
+    plt.savefig(figname+'.eps',format='eps')
+    plt.savefig(figname+'.png',format='png')
 
 def save_seis_image(data,figname="secao_sismica.jpg"):
     rescaled = (255.0 / data.max() * (data - data.min())).astype(np.uint8)

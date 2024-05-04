@@ -36,7 +36,7 @@ class SeisShiftNetModel(BaseModel):
                 self.rand_t = rand_t
                 self.rand_l = rand_l
                 return mask
-            #CH: inserting central rectangular mask with ramdom width    
+            #CH: inserting central rectangular mask with random width    
             elif self.opt.mask_sub_type == 'randw_rect':
                 mask, rand_t, rand_l = util.create_randw_fullrect_mask(self.opt)
                 self.rand_t = rand_t
