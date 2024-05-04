@@ -5,6 +5,7 @@ datasets/
 checkpoints/
 output/
 results/
+figuras/
 .vscode/
 log/
 logs/
