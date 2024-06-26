@@ -4,6 +4,7 @@
 datasets/
 checkpoints/
 output/
+recon_data/
 results/
 figuras/
 .vscode/
