@@ -81,7 +81,7 @@ def make_imgs_synt(lines,nimg,mode,size=256, mute=[264,401]):
     d=len(lines.T)-size
     rl=nimg//l
     imgs=[]
-    print(xl)
+    
     if mode=='random': 
         samples=[np.random.randint(0,high=l,size=nimg),np.random.randint(0,high=xl,size=nimg),np.random.randint(0,high=d,size=nimg)]
         #samples=[random_int_with_mute(l, mute,size=nimg),np.random.randint(0,high=xl,size=nimg),np.random.randint(0,high=d,size=nimg)]
@@ -91,7 +91,7 @@ def make_imgs_synt(lines,nimg,mode,size=256, mute=[264,401]):
    
     if mode=='sequential':
 
-        samples = [np.tile(np.arange(0,l,step=4,dtype='int'),rl+1)[0:nimg],
+        samples = [np.tile(np.arange(0,l,step=1,dtype='int'),rl+1)[0:nimg],
                    np.repeat(np.arange(0,xl,step=xl//(rl+1),dtype='int'),l)[0:nimg],
                    np.repeat(np.arange(0,d,step=d//(rl+1),dtype='int'),l)[0:nimg]]
 

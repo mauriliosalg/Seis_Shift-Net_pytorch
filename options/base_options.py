@@ -132,6 +132,8 @@ class BaseOptions():
 
         opt = self.gather_options(options=options)
         opt.isTrain = self.isTrain   # train or test
+        if not opt.isTrain:
+            opt.nseisimg=opt.how_many
 
         # process opt.suffix
         if opt.suffix:
