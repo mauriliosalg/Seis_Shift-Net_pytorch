@@ -320,6 +320,13 @@ def fixed_width(line,xline):
             return 96
         else:
             return 68
+        
+def fixed_width2(line,xline):
+    if xline==597:
+        return 124
+    if xline==62:
+        return 96
+    
 # Create a rectangular mask with tailored width
 def create_reconstruction_mask(opt,sample_str):
     h, w = opt.fineSize, opt.fineSize
@@ -328,7 +335,7 @@ def create_reconstruction_mask(opt,sample_str):
     sampleCoord = sample_str[0].split(sep="_")
     line=int(sampleCoord[0])
     xline=int(sampleCoord[1])
-    mwidth=fixed_width(line,xline)
+    mwidth=fixed_width2(line,xline)
     wcoord = w//2 - mwidth//2
     
     mask[0:opt.fineSize-1, wcoord:wcoord+mwidth] = 1

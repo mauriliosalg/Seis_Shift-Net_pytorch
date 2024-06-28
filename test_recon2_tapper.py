@@ -51,33 +51,85 @@ if __name__ == "__main__":
     #CH: saving original seismic session for comparison
     im1=np.copy(sismica[opt.plot_line][:].T[:600])
     plot_seis(sismica[opt.plot_line][:].T[:],clip=200,cmap=plt.cm.Greys,figname=os.path.join(recon_dir,'line'+str(opt.plot_line)+'_before.jpg'))
-    # test
+
+    # Função para criar uma janela Hanning 1D
+    def create_hanning_window(size):
+        hanning_window = np.hanning(size)
+        return hanning_window
+
+    # Função para aplicar uma janela Hanning a um patch nas regiões de overlap
+    def apply_tapering(patch1, patch2, window):
+        # Certifique-se de que a janela Hanning tem a mesma dimensão que os patches
+        taper = window[None, :, None]  # Convert to 3D for broadcasting
+        patch1[:, -128:, :] = patch1[:, -128:, :] * (1 - taper[-128:, :]) + patch2[:, :128, :] * taper[-128:, :]
+        patch2[:, :128, :] = patch1[:, -128:, :]
+        return patch1, patch2
+
+    # Criar uma janela Hanning de 256
+    window = create_hanning_window(256)
+
+    # Variáveis para armazenar o patch anterior
+    previous_patch = None
+    previous_coords = None
+
+    # Loop principal para interpolação e aplicação dos patches
     for i, data in enumerate(dataset):
-        #image sample information splited
-        sampleCoord=data['A_sample'][0].split(sep="_")
-        line=int(sampleCoord[0])
-        xline=int(sampleCoord[1])
-        depth=int(sampleCoord[2])
-        #select model for correct size of mask
-        if xline==597:
-            model=models[experiments_names[0]] #masksize=124
-        if xline==62:
-            model=models[experiments_names[1]] #masksize=96
+        # Informação da amostra da imagem separada
+        sampleCoord = data['A_sample'][0].split(sep="_")
+        line = int(sampleCoord[0])
+        xline = int(sampleCoord[1])
+        depth = int(sampleCoord[2])
+        
+        # Selecionar o modelo para o tamanho correto da máscara
+        if xline == 597:
+            model = models[experiments_names[0]]  # masksize=124
+        if xline == 62:
+            model = models[experiments_names[1]]  # masksize=96
 
         if i >= opt.how_many:
             break
+
         model.set_input(data)
         model.test()
-        #generated image for reconstruction
-        fakeB = util.tensor2metric(getattr(model,"fake_B")) #model output to numpy array
-        fakeB = (fakeB*maximo) + media #unnormalize the image
-        sismica[line][xline:xline+256].T[depth:depth+256]=fakeB #substitute image on original seismic file
+        
+        # Gerar a imagem interpolada
+        fakeB = util.tensor2metric(getattr(model, "fake_B"))  # model output to numpy array
+        fakeB = (fakeB * maximo) + media  # unnormalize the image
+
+        # Expandir dimensões se necessário para compatibilidade de shape
+        if fakeB.ndim == 2:
+            fakeB = np.expand_dims(fakeB, axis=0)  # Adicionar dimensão de canal se necessário
+        if fakeB.shape[0] == 1:  # Se só tem um canal, adicionar mais uma dimensão
+            fakeB = np.expand_dims(fakeB, axis=0)
+
+        # Se houver um patch anterior, aplicar tapering
+        if previous_patch is not None:
+            previous_patch, fakeB = apply_tapering(previous_patch, fakeB, window)
+            
+            # Colar o patch anterior com tapering aplicado
+            prev_line, prev_xline, prev_depth = previous_coords
+            sismica[prev_line][prev_xline:prev_xline+256].T[prev_depth:prev_depth+256] = previous_patch
+
+        # Atualizar o patch anterior e suas coordenadas
+        previous_patch = fakeB
+        previous_coords = (line, xline, depth)
+
+        # Se for o último patch de uma sequência, colar o patch atual e resetar o patch anterior
+        if (i + 1) % 5 == 0:
+            sismica[line][xline:xline+256].T[depth:depth+256] = fakeB
+            previous_patch = None
+            previous_coords = None
         
         visuals = model.get_current_visuals()
         img_path = model.get_image_paths()
         print('process image... %s' % img_path)
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, isseismic=isseismic)
 
+    # Último patch da última sequência
+    if previous_patch is not None:
+        line, xline, depth = previous_coords
+        sismica[line][xline:xline+256].T[depth:depth+256] = previous_patch
+        
     ### CH: Plotting an inline reconstructed
     im2=sismica[opt.plot_line][:].T[:600]
     np.save(os.path.join(recon_dir,'line'+str(opt.plot_line)+'recon'),im2)
@@ -86,7 +138,7 @@ if __name__ == "__main__":
 
     if opt.save_recon:
         
-        output_file = os.path.join(opt.sgy_recon_dir,'dado_cut_recon2.sgy')
+        output_file = os.path.join(opt.sgy_recon_dir,'dado_cut_recon2_tapper.sgy')
         segyio.tools.from_array3D(output_file, sismica, iline=193, xline=197, dt=5000,delrt=0)
         
 
